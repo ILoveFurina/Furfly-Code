@@ -1,0 +1,22 @@
+# furflycode configuration
+# Copy this file to config.yaml and fill in your API keys.
+# config.yaml is git-ignored to protect your keys.
+
+providers:
+  - name: Claude
+    protocol: anthropic
+    api_key: sk-ant-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    model: claude-sonnet-4-20250514
+    thinking: true
+
+  # - name: GPT
+  #   protocol: openai
+  #   api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  #   model: gpt-4o
+  #   base_url: https://api.openai.com/v1  # optional: override default endpoint
+
+  # - name: DeepSeek
+  #   protocol: openai
+  #   api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  #   model: deepseek-v4-flash
+  #   base_url: https://api.deepseek.com  # optional: override default endpoint
