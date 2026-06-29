@@ -1,4 +1,4 @@
-"""agent 包 — 单轮闭环编排（F5/F6）。
+"""agent 包 — 单轮闭环编排。
 
 承载「请求#1（带工具）→ 收集工具调用 → 注册中心执行 → 结果回灌进 Conversation
 → 请求#2（续答）→ 最终文本 → 停」。对外吐出一条 Event async generator 供 TUI 渲染。

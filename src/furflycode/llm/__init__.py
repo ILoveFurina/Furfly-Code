@@ -19,10 +19,6 @@ from furflycode.tool import ToolDefinition
 class Provider(Protocol):
     """
     适配器目标接口 Target
-
-    提供统一的Provider结构给被适配者(agent层)
-    通过Protocol(静态鸭子类型)，只要它的属性和方法与 Provider 形状一致，
-    类型检查器（mypy/pyright）就会把它视为 Provider 的合法实现。这种行为叫结构化子类型
     """
 
     @property
