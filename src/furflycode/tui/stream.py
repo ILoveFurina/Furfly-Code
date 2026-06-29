@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 from rich.markdown import Markdown
 from rich.text import Text
+from textual.widgets import RichLog, Static
 
 from furflycode.agent import Agent, Event, Phase
 from furflycode.tui.view import (
@@ -40,6 +41,7 @@ async def consume_agent_events(app: furflycodeApp) -> None:
 
     Launched as an asyncio.Task from the App.
     """
+    assert app.provider is not None  # 由 submit 在 provider 非空时调用
     agent = Agent(app.provider, app._tool_registry)
     try:
         async for ev in agent.run(app.conv):
@@ -63,12 +65,12 @@ async def _dispatch(app: furflycodeApp, ev: Event) -> None:
         if ev.tool.phase == Phase.START:
             # 若有 preamble 文本，先提交到 scrollback 并清空动态区
             if app.cur_reply:
-                app.query_one("#log").write(Markdown(app.cur_reply))
+                app.query_one("#log", RichLog).write(Markdown(app.cur_reply))
                 app.cur_reply = ""
             app._cur_tool = ToolDisplay(name=ev.tool.name, args=ev.tool.args)
             _refresh_streaming_view(app)
         else:  # Phase.END
-            log = app.query_one("#log")
+            log = app.query_one("#log", RichLog)
             log.write(tool_line(ev.tool.name, ev.tool.args))
             log.write(tool_result_summary(ev.tool.result, ev.tool.is_error))
             app._cur_tool = None
@@ -86,7 +88,7 @@ def tick(app: furflycodeApp) -> None:
     if app.state != SessionState.STREAMING:
         return
     elapsed = time.monotonic() - app.turn_start
-    streaming_widget = app.query_one("#streaming")
+    streaming_widget = app.query_one("#streaming", Static)
     if app._cur_tool is not None:
         streaming_widget.update(
             tool_running_text(app._cur_tool.name, app._cur_tool.args, elapsed)
@@ -98,7 +100,7 @@ def tick(app: furflycodeApp) -> None:
 def _refresh_streaming_view(app: furflycodeApp) -> None:
     """Update the streaming area with the current reply buffer / tool indicator."""
     elapsed = time.monotonic() - app.turn_start
-    streaming_widget = app.query_one("#streaming")
+    streaming_widget = app.query_one("#streaming", Static)
     if app._cur_tool is not None:
         streaming_widget.update(
             tool_running_text(app._cur_tool.name, app._cur_tool.args, elapsed)
@@ -114,7 +116,7 @@ async def _finish_with_assistant(app: furflycodeApp, reply: str) -> None:
     """
     from furflycode.tui.app import SessionState
 
-    log = app.query_one("#log")
+    log = app.query_one("#log", RichLog)
     if reply.strip():
         log.write(Markdown(reply))
     elapsed = time.monotonic() - app.turn_start
@@ -128,7 +130,7 @@ async def _finish_with_error(app: furflycodeApp, err: Exception) -> None:
     """Finalize a failed turn: display error, reset state."""
     from furflycode.tui.app import SessionState
 
-    log = app.query_one("#log")
+    log = app.query_one("#log", RichLog)
     log.write(error_block(err))
     _stop_streaming(app)
     app.state = SessionState.IDLE
@@ -143,5 +145,5 @@ def _stop_streaming(app: furflycodeApp) -> None:
     app._stream_task = None
     app._cur_tool = None
     app.cur_reply = ""
-    streaming_widget = app.query_one("#streaming")
+    streaming_widget = app.query_one("#streaming", Static)
     streaming_widget.update("")

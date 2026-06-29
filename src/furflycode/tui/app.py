@@ -6,6 +6,7 @@ import asyncio
 import os
 import time
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from textual import events
 from textual.app import App, ComposeResult
@@ -23,6 +24,9 @@ from furflycode.tool import Registry
 from furflycode.tui.select import ProviderSelect
 from furflycode.tui.stream import consume_agent_events, tick
 from furflycode.tui.view import status_bar_text, user_block
+
+if TYPE_CHECKING:
+    from furflycode.tui.stream import ToolDisplay
 
 
 class SessionState(Enum):
@@ -59,7 +63,7 @@ class PromptInput(TextArea):
             self.text = text
             super().__init__()
 
-    def _on_key(self, event: events.Key) -> None:
+    async def _on_key(self, event: events.Key) -> None:
         if event.key == "enter":
             # Enter 提交 — 阻止 TextArea 插入换行
             event.stop()
@@ -73,7 +77,7 @@ class PromptInput(TextArea):
             self._insert_newline()
             return
         # 其他按键：交给 TextArea 默认处理
-        super()._on_key(event)
+        await super()._on_key(event)
 
     def _insert_newline(self) -> None:
         """在当前光标位置插入换行符。"""
@@ -139,7 +143,7 @@ class furflycodeApp(App):  # noqa: N801 — 名称由 spec 固定
         self.conv = Conversation()
         self.cur_reply = ""
         self.turn_start = 0.0
-        self._cur_tool = None  # 执行中工具指示（ToolDisplay | None）
+        self._cur_tool: ToolDisplay | None = None  # 执行中工具指示
         self._stream_task: asyncio.Task[None] | None = None
         self._timer: Timer | None = None
 

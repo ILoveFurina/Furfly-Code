@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
 import anthropic
+from anthropic.types import ToolUseBlock
 
 from furflycode.message import (
     ROLE_ASSISTANT,
@@ -57,7 +58,7 @@ def _to_anthropic_messages(msgs: list[Message]) -> list[dict[str, Any]]:
     for m in msgs:
         if m.role == ROLE_TOOL and m.tool_results:
             # 工具结果回合映射为一条 user 消息，content 为 tool_result 块数组。
-            content = [
+            content: list[dict[str, Any]] = [
                 {
                     "type": "tool_result",
                     "tool_use_id": r.tool_call_id,
@@ -68,7 +69,7 @@ def _to_anthropic_messages(msgs: list[Message]) -> list[dict[str, Any]]:
             ]
             api_msgs.append({"role": ROLE_USER, "content": content})
         elif m.role == ROLE_ASSISTANT and m.tool_calls:
-            content: list[dict[str, Any]] = []
+            content = []
             if m.content:
                 content.append({"type": "text", "text": m.content})
             for c in m.tool_calls:
@@ -157,7 +158,7 @@ class AnthropicProvider:
                 if final_message.stop_reason == "tool_use":
                     calls: list[ToolCall] = []
                     for block in final_message.content:
-                        if getattr(block, "type", None) == "tool_use":
+                        if isinstance(block, ToolUseBlock):
                             calls.append(
                                 ToolCall(
                                     id=block.id,

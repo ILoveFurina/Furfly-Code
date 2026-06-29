@@ -9,12 +9,12 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Final, Literal
 
 # 消息角色字面量。
-ROLE_USER = "user"
-ROLE_ASSISTANT = "assistant"
-ROLE_TOOL = "tool"  # 携带工具执行结果的回合
+ROLE_USER: Final[Literal["user"]] = "user"
+ROLE_ASSISTANT: Final[Literal["assistant"]] = "assistant"
+ROLE_TOOL: Final[Literal["tool"]] = "tool"  # 携带工具执行结果的回合
 
 
 @dataclass
