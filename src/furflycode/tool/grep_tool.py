@@ -71,7 +71,7 @@ class GrepTool:
         hits: list[str] = []
         truncated = False
         try:
-            iterator = root.rglob(name_glob) if name_glob != "*" else root.rglob("*")
+            iterator = root.rglob(name_glob)
             for file in iterator:
                 if not file.is_file():
                     continue
@@ -79,9 +79,10 @@ class GrepTool:
                     with file.open("r", encoding="utf-8", errors="replace") as f:
                         for lineno, line in enumerate(f, 1):
                             if len(line) > _MAX_LINE_LEN:
-                                # 超长行跳过避免假"无命中"
+                                # 避免超长行拖垮正则引擎
                                 continue
                             if rx.search(line):
+                                # rstrip()防止去掉代码缩进
                                 hits.append(f"{file}:{lineno}:{line.rstrip()}")
                                 if len(hits) >= _MAX_HITS:
                                     truncated = True

@@ -91,7 +91,11 @@ def _to_anthropic_messages(msgs: list[Message]) -> list[dict[str, Any]]:
 
 
 class AnthropicProvider:
-    """由 Anthropic Messages API 提供支持的 LLM provider。"""
+    """
+    Anthropic 适配器 具体一点就是 Anthropic stream适配器
+    通过上面三个工具类 将Anthropic原生stream 适配为了本项目通用的stream
+    用项目通用的Events,Tool,Message 传入此适配器 屏蔽了Anthropic API
+    """
 
     def __init__(self, config: ProviderConfig) -> None:
         self._config = config
@@ -115,8 +119,8 @@ class AnthropicProvider:
         msgs: list[Message],
         tools: list[ToolDefinition],
     ) -> AsyncIterator[StreamEvent]:
-        """通过 Anthropic Messages API 流式发起一次对话轮次。
-
+        """
+        通过 Anthropic Messages API 流式发起一次对话轮次。
         思考增量会被静默丢弃；工具调用在流结束后一次性上抛（F4）。
         """
         api_msgs = _to_anthropic_messages(msgs)
@@ -147,7 +151,8 @@ class AnthropicProvider:
                             continue
                         if delta.type == "text_delta":
                             yield StreamEvent(text=delta.text)
-
+                #区别于OpenAI只能代码累加，Anthropic的SDK上下文管理自带累加器
+                #Anthropic提供了一个get_final_message()取得最终完整的message对象
                 final_message = await stream.get_final_message()
                 if final_message.stop_reason == "tool_use":
                     calls: list[ToolCall] = []

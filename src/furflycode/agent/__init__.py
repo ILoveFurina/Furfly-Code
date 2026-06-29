@@ -15,7 +15,10 @@ from furflycode.conversation import Conversation
 from furflycode.llm import Provider, ToolCall, ToolResult
 from furflycode.tool import DEFAULT_TIMEOUT, Registry
 
-
+"""
+这里的Event都是面对TUI的数据类型
+也就是说，这里yield出去的数据，都是给前端消费的。
+"""
 class Phase(Enum):
     """工具调用执行阶段。"""
 

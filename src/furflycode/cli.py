@@ -10,7 +10,10 @@ from furflycode.tui.app import furflycodeApp
 
 
 def main() -> None:
-    """应用入口。"""
+    """
+    应用入口
+    config通过load(config_path) 获得可操作的config顶层对象
+    """
     config_path = ".furflycode/config.yaml"
     try:
         config = load(config_path)
