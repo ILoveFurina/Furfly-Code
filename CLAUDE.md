@@ -25,7 +25,9 @@
 
 ## 4. Conventions
 - 强制要求中文回答，中文注释。
-
+- 分支策略：直接在 main 上开发。
+- Commit message 风格：建议用约定式提交 feat fix docs refactor chore 
+- 格式：<类型>: <描述>，中文描述。第一行 ≤50 字，必要时空一行写正文说明 why。
 ## 5. Hard Constraints
 
 ## 6. Gotchas
