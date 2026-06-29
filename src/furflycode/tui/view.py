@@ -1,9 +1,13 @@
-"""视图辅助 — 聊天块、状态栏与错误的渲染函数。"""
+"""视图辅助 — 聊天块、状态栏、工具行与错误的渲染函数。"""
 
 from __future__ import annotations
 
 from rich.markdown import Markdown
+from rich.padding import Padding
 from rich.text import Text
+
+# UI 摘要截断上限（AC11/N5）。
+_UI_RESULT_LINES = 8
 
 
 def user_block(text: str) -> Text:
@@ -19,6 +23,29 @@ def assistant_block(reply: str) -> Markdown:
 def error_block(err: Exception) -> Text:
     """为 RichLog 渲染错误消息块。"""
     return Text(f"● Error: {err}", style="bold red")
+
+
+def tool_line(name: str, args: str) -> Text:
+    """Claude Code 风格工具行：``● name(args)``（F8/AC11）。"""
+    return Text.assemble(
+        Text("● ", style="bold cyan"),
+        Text(name, style="bold"),
+        Text(f"({args})" if args else "()", style="bold"),
+    )
+
+
+def tool_result_summary(result: str, is_error: bool) -> Padding:
+    """工具结果摘要：缩进 ``⎿`` 前缀，灰/红，UI 截断 ~8 行（F8/AC11）。"""
+    lines = result.splitlines()
+    if len(lines) > _UI_RESULT_LINES:
+        body = "\n".join(lines[:_UI_RESULT_LINES]) + "\n[truncated]"
+    else:
+        body = result
+    style = "bold red" if is_error else "dim"
+    return Padding(
+        Text(f"⎿ {body}", style=style),
+        (0, 0, 0, 2),
+    )
 
 
 def status_bar_text(provider_name: str, model_name: str, width: int) -> Text:
@@ -48,3 +75,12 @@ def streaming_text(cur_reply: str, elapsed_seconds: float) -> Text:
         # 等待首个 token — 只显示提示。
         return imagining
     return Text.assemble(cur_reply, "\n", imagining)
+
+
+def tool_running_text(name: str, args: str, elapsed_seconds: float) -> Text:
+    """工具执行中的动态区内容：``● name(args) Running… (Ns)``（N2）。"""
+    return Text.assemble(
+        Text("● ", style="bold cyan"),
+        Text(f"{name}({args}) " if args else f"{name}() ", style="bold"),
+        Text(f"Running… ({int(elapsed_seconds)}s)", style="dim italic"),
+    )

@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 
 from furflycode.config import ConfigError, load
+from furflycode.tool import new_default_registry
 from furflycode.tui.app import furflycodeApp
 
 
@@ -18,7 +19,8 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        app = furflycodeApp(config.providers)
+        registry = new_default_registry()
+        app = furflycodeApp(config.providers, registry)
         app.run()
     except KeyboardInterrupt:
         # Ctrl+C 在应用内部已处理；这里兜底捕获异常情况

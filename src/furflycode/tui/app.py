@@ -19,8 +19,9 @@ from furflycode.config import ProviderConfig
 from furflycode.conversation import Conversation
 from furflycode.llm import Provider, new_provider
 from furflycode.prompt import render_banner
+from furflycode.tool import Registry
 from furflycode.tui.select import ProviderSelect
-from furflycode.tui.stream import consume_stream, tick
+from furflycode.tui.stream import consume_agent_events, tick
 from furflycode.tui.view import status_bar_text, user_block
 
 
@@ -125,14 +126,20 @@ class furflycodeApp(App):  # noqa: N801 — 名称由 spec 固定
         Binding("ctrl+c", "quit", "Quit", priority=True),
     ]
 
-    def __init__(self, providers: list[ProviderConfig]) -> None:
+    def __init__(
+        self,
+        providers: list[ProviderConfig],
+        registry: Registry | None = None,
+    ) -> None:
         super().__init__()
         self.providers = providers
+        self._tool_registry: Registry = registry if registry is not None else Registry()
         self.state = SessionState.IDLE
         self.provider: Provider | None = None
         self.conv = Conversation()
         self.cur_reply = ""
         self.turn_start = 0.0
+        self._cur_tool = None  # 执行中工具指示（ToolDisplay | None）
         self._stream_task: asyncio.Task[None] | None = None
         self._timer: Timer | None = None
 
@@ -209,7 +216,7 @@ class furflycodeApp(App):  # noqa: N801 — 名称由 spec 固定
         self.turn_start = time.monotonic()
         self.state = SessionState.STREAMING
 
-        self._stream_task = asyncio.create_task(consume_stream(self))
+        self._stream_task = asyncio.create_task(consume_agent_events(self))
         self._timer = self.set_interval(0.1, lambda: tick(self))
 
     # ────────────── status bar ──────────────
