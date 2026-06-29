@@ -29,7 +29,7 @@ Furfly Code 是一个终端 AI 编程助手（Claude Code 风格），Python 实
 - **Provider 适配器模式**：`agent`/`tui` 只依赖 `llm.Provider` Protocol；新增协议只需实现接口并在 `new_provider` 注册。
 - **工具结果回灌形状**（`anthropic_provider._to_anthropic_messages`）：ROLE_TOOL 回合映射为一条 user 消息的 `tool_result` 块数组；assistant 工具调用回合 content 用 `[text, tool_use...]` 数组。
 - **thinking 与工具历史互斥**：含工具历史的请求关闭 thinking，避免签名缺失导致 400。
-- **单轮上限（AC9）**：续答请求#2 忽略其返回的工具调用，不再发起新一轮工具执行。
+- **单轮上限**：续答请求#2 忽略其返回的工具调用，不再发起新一轮工具执行。
 - **StreamEvent 四态**：text / tool_calls / done / err（err 与 done 互斥）。
 
 ## 4. Conventions

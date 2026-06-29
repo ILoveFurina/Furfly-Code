@@ -2,7 +2,7 @@
 
 ## Context
 
-step2 工具系统已验收，但 `tool` 数据结构有两层"乱"：
+tool-system 工具系统已验收，但 `tool` 数据结构有两层"乱"：
 
 1. **类型住错地方（依赖方向倒）**：协议无关的共享类型（`Message`/`StreamEvent`/`ToolCall`/`ToolResult`/`ToolDefinition`/`ROLE_*`/`dumps_tool_input`）全堆在 `llm/` 里——它们自己的文档都自称"协议无关"，却住在一个叫 `llm` 的包里。这逼着 `tool/`（文档自称"零外部依赖，不感知 LLM 协议"，却在 `tool/__init__.py:13` `from furflycode.llm import ToolDefinition`）和 `conversation.py`、`agent` 全部反向依赖 `llm/`。`llm/` 一身两职：既是 LLM 适配器，又当全工程共享词汇库。
 2. **每个工具重复样板**：6 个工具各写"解析 JSON → 取参 → 缺参检查"三件套；共享的 `_parse_args` 寄居叶子工具 `read_file.py:68` 被另外 5 个反向导入；返回 `dict | Result` 联合类型逼出每处 `isinstance(data, Result)` 判空；schema 的 `required` 与手写缺参检查两处事实源。
@@ -30,7 +30,7 @@ agent        从 tool/message/conversation/llm 取类型
 
 **Non-Goals:**
 
-- 行为零变化——落在 step2 spec F1/F5/F9/N4 内，不改 spec 与验收标准。
+- 行为零变化——落在 tool-system 的工具抽象/工具执行/结构化错误/健壮性需求内，不改 spec 与验收标准。
 - 不改对外签名 `execute(args: str)`、`Registry.execute`、`definitions()`，agent/providers/conversation/tui 无需改（Part 1 已把 providers 的导入路径改掉）。
 
 ## Decisions
@@ -60,6 +60,6 @@ agent        从 tool/message/conversation/llm 取类型
 
 ## Risks / Trade-offs
 
-- **兼容性风险**：行为零变化是硬约束，消息文案需逐字一致（缺失必填键、null、坏 JSON、非对象、空串必填值）。缓解——`_parse_args` 与缺参分支的文案原样搬入基类，不动；`Registry.execute` 宽 `except` 兜底不变（N4）。抽查命令验证缺参输出 `缺少必填参数: path`。
+- **兼容性风险**：行为零变化是硬约束，消息文案需逐字一致（缺失必填键、null、坏 JSON、非对象、空串必填值）。缓解——`_parse_args` 与缺参分支的文案原样搬入基类，不动；`Registry.execute` 宽 `except` 兜底不变。抽查命令验证缺参输出 `缺少必填参数: path`。
 - **导入路径变更波及测试**：Part 1 改向 message/tool 的导入会触及 `tests/test_conversation.py:6`、`tests/test_agent.py:10`。缓解——仅改导入断言路径，测试断言不动；全量 `pytest` 验证路径全通。
 - **`tool/__init__.py` 两 Part 共改**：Part 1 落地 `ToolDefinition` 本地定义建立边界，Part 2 再清内部 `BaseTool`/`_parse_args`，两 Part 互相独立但都改该文件——顺序上 Part 1 先行。

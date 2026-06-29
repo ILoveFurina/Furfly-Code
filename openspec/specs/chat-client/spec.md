@@ -1,7 +1,7 @@
 # chat-client Specification
 
 ## Purpose
-TBD - created by archiving change multi-protocol-chat-client. Update Purpose after archive.
+chat-client 规格定义 Furfly Code 的多协议 LLM 终端对话客户端：配置加载与校验、provider 选择、Anthropic / OpenAI 协议适配、流式接收、多轮上下文、终端界面布局与交互、错误反馈与退出。
 ## Requirements
 ### Requirement: 配置加载
 

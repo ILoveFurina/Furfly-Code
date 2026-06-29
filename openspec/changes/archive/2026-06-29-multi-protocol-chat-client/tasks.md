@@ -60,7 +60,7 @@
 - [x] 9.1 在 `src/furflycode/tui/app.py` 定义 `class SessionState(Enum)`：`SELECTING` / `IDLE` / `STREAMING`。
 - [x] 9.2 定义 `class furflycodeApp(App)`：构造参数 `providers: list[ProviderConfig]`；初始化 state、`provider: Provider | None`、`conv = Conversation()`、`cur_reply = ""`、`turn_start = 0.0`、`_stream_task = None`、`_timer = None`。
 - [x] 9.3 `compose()`：yield `RichLog`(id="log", wrap=True, markup=True)、`Static`(id="streaming")、`TextArea`(id="input", single_line=False)、`Static`(id="statusbar")。
-- [x] 9.4 `on_mount`：把 `prompt.render_banner(__version__, os.getcwd())` 写进 `RichLog`；`len(providers) == 1` → `new_provider(providers[0])` + IDLE + 更新状态栏；否则切 SELECTING（在组 11 接入 OptionList）。
+- [x] 9.4 `on_mount`：把 `prompt.render_banner(__version__, os.getcwd())` 写进 `RichLog`；`len(providers) == 1` → `new_provider(providers[0])` + IDLE + 更新状态栏；否则切 SELECTING（OptionList 选择在 provider 选择任务中接入）。
 - [x] 9.5 `BINDINGS = [("ctrl+c", "quit", "Quit")]`；`async def action_quit`：若 `_stream_task` 存在则 `cancel()`，`self.exit()`。
 - [x] 9.6 `cli.main` 调 `furflycodeApp(providers).run()`。
 
@@ -79,7 +79,7 @@
 - [x] 11.1 在 `src/furflycode/tui/select.py`：`state == SELECTING` 时 `compose` 再 yield 一个 `OptionList`，列出 `f"{p.name} ({p.model})"` 每项。
 - [x] 11.2 监听 `on_option_list_option_selected`：取对应 `ProviderConfig` → `self.provider = new_provider(cfg)` → 更新状态栏 → 隐藏/移除 OptionList → 切 IDLE。
 - [x] 11.3 进入 SELECTING 时隐藏 TextArea/RichLog 仅显示 list，切回 IDLE 时反过来。
-- [x] 11.4 用 2 条 provider 配置启动验证出现选择列表（端到端验证留到组 14）。
+- [x] 11.4 用 2 条 provider 配置启动验证出现选择列表（端到端验证在联调任务中进行）。
 
 ## 12. TUI View 拼装与渲染
 
@@ -88,7 +88,7 @@
 - [x] 12.3 状态栏：用 Rich `Text`/`Table.grid` 左 `provider.name`、右 `provider.model` 两端对齐，写到 `#statusbar: Static`。
 - [x] 12.4 完成块：`user_block(text)` = `Text("● " + text, style="bold")`；`render_markdown(reply)` = `Group(Text("● "), Markdown(reply))`；都无 You/furflycode 文字标签。
 - [x] 12.5 错误样式：`error_block(err)` 用 `Text("● " + str(err), style="bold red")`。
-- [x] 12.6 长行：CSS 设 `#streaming: width: 1fr; height: auto;`、`Markdown`/`RichLog` 用 `width: 1fr;` 自适应（满足 N6）。
+- [x] 12.6 长行：CSS 设 `#streaming: width: 1fr; height: auto;`、`Markdown`/`RichLog` 用 `width: 1fr;` 自适应，避免窄屏错版。
 
 ## 13. 入口装配
 

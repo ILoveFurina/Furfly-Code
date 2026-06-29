@@ -25,7 +25,7 @@
 ## 4. new_default_registry 与 tool 单测
 
 - [x] 4.1 在 `src/furflycode/tool/__init__.py` 增 `new_default_registry()`：依次 `register` 6 个工具返回 `Registry`。
-- [x] 4.2 在 `tests/test_tool.py`（pytest-asyncio）测：`definitions()` 恰好 6 条且名称有序（AC1）；`read_file` 存在/不存在；`write_file` 新建 + 嵌套路径（`tmp_path` fixture）检查磁盘；`edit_file` 0/1/多三情形错误可区分；`bash` `echo` 与超时（注入极短 timeout 跑 `sleep 5`）；`glob` `**/*.py`；`grep` 关键字。
+- [x] 4.2 在 `tests/test_tool.py`（pytest-asyncio）测：`definitions()` 恰好 6 条且名称有序；`read_file` 存在/不存在；`write_file` 新建 + 嵌套路径（`tmp_path` fixture）检查磁盘；`edit_file` 0/1/多三情形错误可区分；`bash` `echo` 与超时（注入极短 timeout 跑 `sleep 5`）；`glob` `**/*.py`；`grep` 关键字。
 - [x] 4.3 若未装 pytest-asyncio：`pyproject.toml` 的 `[dependency-groups].dev` 加 `pytest-asyncio>=0.23`，`[tool.pytest.ini_options]` 加 `asyncio_mode = "auto"`。验证 `pytest tests/test_tool.py -v` 全通过。
 
 ## 5. Provider.stream 注入工具定义
@@ -57,7 +57,7 @@
 ## 9. agent 单轮闭环
 
 - [x] 9.1 在 `src/furflycode/agent/__init__.py` 定义 `Phase`(START/END)、`ToolEvent`、`Event`、`class Agent(provider, registry)`、`async def run(self, conv) -> AsyncIterator[Event]`（按 plan 的 run 算法）；`_stream_once(conv, defs)` 内部 helper 转发 text、累积 preamble、收集 tool_calls；args 预览取 `input` 简短串（截断到 80 字符）。
-- [x] 9.2 在 `tests/test_agent.py`（pytest-asyncio）用 `FakeProvider`（实现 Provider Protocol，内部用 `call_count` 切换两段脚本）编排：(a) 请求#1 yield 1 个 `read_file` ToolCall、请求#2 yield 文本「文件已读取」→ 断言 Event 序列含 `tool=START/END` 与最终 `text`、`conv.messages()` 末尾为 assistant 文本（AC8）；(b) 请求#1 yield 工具、请求#2 仍 yield 工具 → 断言只调用一次 `registry.execute`、不再触发执行（AC9）。验证 `pytest tests/test_agent.py -v` 全通过。
+- [x] 9.2 在 `tests/test_agent.py`（pytest-asyncio）用 `FakeProvider`（实现 Provider Protocol，内部用 `call_count` 切换两段脚本）编排：(a) 请求#1 yield 1 个 `read_file` ToolCall、请求#2 yield 文本「文件已读取」→ 断言 Event 序列含 `tool=START/END` 与最终 `text`、`conv.messages()` 末尾为 assistant 文本；(b) 请求#1 yield 工具、请求#2 仍 yield 工具 → 断言只调用一次 `registry.execute`、不再触发执行（单轮闭环约束）。验证 `pytest tests/test_agent.py -v` 全通过。
 
 ## 10. prompt 系统提示词扩展
 
@@ -79,8 +79,8 @@
 - [x] 13.1 `ruff format --check .` 与 `ruff check .` 无告警。
 - [x] 13.2 `pytest -v` 通过（`tests/test_config.py`、`tests/test_conversation.py`、`tests/test_tool.py`、`tests/test_agent.py`）。
 - [x] 13.3 （可选）`mypy src/furflycode` 通过（可选项，未完成不阻塞）。
-- [x] 13.4 端到端冒烟：用 openai 兼容端点问「读 docs/features/step2.工具系统/spec.md 并用一句话总结」→ 观察工具行 `● read_file(...)` + 结果摘要 + 最终答复（AC8/AC11）。
-- [x] 13.5 错误恢复：读不存在文件、edit 匹配不到、bash 非零退出 → 错误结构化回灌、程序不退出（AC12）。
-- [x] 13.6 （可选）若有 anthropic 配置，重复冒烟验证跨协议一致（AC10）。
+- [x] 13.4 端到端冒烟：用 openai 兼容端点问「读 `openspec/changes/archive/2026-06-29-tool-system/specs/tool-system/spec.md` 并用一句话总结」→ 观察工具行 `● read_file(...)` + 结果摘要 + 最终答复。
+- [x] 13.5 错误恢复：读不存在文件、edit 匹配不到、bash 非零退出 → 错误结构化回灌、程序不退出。
+- [x] 13.6 （可选）若有 anthropic 配置，重复冒烟验证跨协议一致。
 - [x] 13.7 用 tmux 验证 scrollback：完成块可回看工具行 + 结果摘要 + 最终答复，顺序不乱。
 - [x] 13.8 密钥不回显/不打印：对话区与任何输出均不出现 `api_key`（通读运行输出、检索无明文 key）。

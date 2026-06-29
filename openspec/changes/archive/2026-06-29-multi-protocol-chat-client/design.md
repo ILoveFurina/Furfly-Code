@@ -61,7 +61,7 @@ furflycode 是从零构建的 Claude Code 风格终端 AI Agent，本 change 是
 
 ### markdown 渲染
 - 选择：Rich 的 `rich.markdown.Markdown`
-- 理由：Textual 内部即用 Rich；代码块语法高亮、列表、强调齐全；宽度自适应（满足 N6）。
+- 理由：Textual 内部即用 Rich；代码块语法高亮、列表、强调齐全；宽度自适应终端列宽。
 - 备选：无。
 
 ### LLM 通信
@@ -71,17 +71,17 @@ furflycode 是从零构建的 Claude Code 风格终端 AI Agent，本 change 是
 
 ### 协议抽象
 - 选择：统一 `Provider` Protocol + 两适配器
-- 理由：满足 F3/N3；上层不感知协议。
+- 理由：上层不感知协议，新增协议只需实现接口并注册。
 - 备选：直接在 TUI 内分支两种协议（被否决，会破坏一致性与可扩展性）。
 
 ### 流式接入 TUI
 - 选择：`async for event in provider.stream(...)` 直跑在 Textual 的事件循环里
-- 理由：Python async-first，无需 channel/Cmd 胶水；界面不阻塞（满足 N1）。
+- 理由：Python async-first，无需 channel/Cmd 胶水；界面不阻塞。
 - 备选：独立线程 + 队列（被否决，async-first 体系不需要）。
 
 ### 流式渲染策略
 - 选择：流式纯文本 + done 后 `rich.markdown.Markdown` 定型
-- 理由：markdown 需完整块；增量渲染会抖动（满足 F8）。
+- 理由：markdown 需完整块；增量渲染会抖动，定型时机后置以避免。
 - 备选：增量 markdown 渲染（被否决，会抖动）。
 
 ### 渲染模型
@@ -96,33 +96,33 @@ furflycode 是从零构建的 Claude Code 风格终端 AI Agent，本 change 是
 
 ### 计时
 - 选择：`turn_start = time.monotonic()` + `set_interval(0.1, ...)` 计算 elapsed
-- 理由：自请求即计时，Textual 内置 timer 驱动（满足 F12）。
+- 理由：自请求即计时，由 Textual 内置 timer 驱动刷新。
 - 备选：无。
 
 ### provider 选择
 - 选择：单份直进 / 多份 `OptionList` 选择
-- 理由：满足 F2。
+- 理由：单份配置直进最省事，多份配置用方向键列表选定。
 - 备选：无。
 
 ### 历史管理
 - 选择：进程内 `list[Message]`，单会话
-- 理由：满足 F6；不持久化。
+- 理由：进程内维护单会话历史即可，不持久化。
 - 备选：持久化存储（被否决，明确 Non-Goal）。
 
 ### system prompt 注入
 - 选择：内置常量，适配器注入
-- 理由：满足 F4；conversation 保持纯 user/assistant。
+- 理由：system 提示词由适配器注入，conversation 保持纯 user/assistant 消息。
 - 备选：conversation 层携带 system 消息（被否决，会污染对话模型）。
 
 ### 配置
 - 选择：`.furflycode/config.yaml` + `pyyaml`；密钥入 `.gitignore`
-- 理由：用户既定路径；满足 N5 密钥安全。
+- 理由：用户既定路径；密钥入 `.gitignore` 保证不泄露。
 - 备选：环境变量 / 命令行 flag 覆盖（被否决，明确 Non-Goal）。
 
 ### 错误处理
 - 选择：运行时错误经 `StreamEvent.err` 显示，不退出
-- 理由：满足 F11。
-- 备选：异常上抛导致退出（被否决，违背 F11）。
+- 理由：运行时错误经 `StreamEvent.err` 透出，会话不中断。
+- 备选：异常上抛导致退出（被否决，违背会话不中断原则）。
 
 ### 类型与质量
 - 选择：`typing.Protocol` + `dataclass`；`ruff format` + `ruff check` + 可选 `mypy`
@@ -136,8 +136,8 @@ furflycode 是从零构建的 Claude Code 风格终端 AI Agent，本 change 是
 - [界面阻塞风险] → 直接在 Textual 的 asyncio 事件循环里 `async for` 消费流，天然不阻塞；完成消息走 `RichLog.write` 追加而非全量重绘。
 - [密钥泄露] → `.furflycode/config.yaml` 入 `.gitignore`；密钥不回显、不打印到对话区或日志。
 - [配置错误导致崩溃堆栈] → `config.load` 统一捕获文件缺失/YAML 解析错误/字段校验失败，转 `ConfigError` 可读信息，入口 `sys.exit(1)`。
-- [退出残留终端状态] → 退出时 `task.cancel()` 终止进行中的流，依赖 Textual 自动还原 raw mode（满足 N7）。
+- [退出残留终端状态] → 退出时 `task.cancel()` 终止进行中的流，依赖 Textual 自动还原 raw mode。
 - [跨协议行为不一致] → 统一 `Provider` Protocol 与 `StreamEvent` 抽象，两适配器都吐出相同形态事件，上层不感知协议。
-- [窄屏错版] → CSS 设置 `#streaming` / `Markdown` / `RichLog` 为 `width: 1fr;` 自适应，依赖 Textual + Rich 默认软换行（满足 N6）。
+- [窄屏错版] → CSS 设置 `#streaming` / `Markdown` / `RichLog` 为 `width: 1fr;` 自适应，依赖 Textual + Rich 默认软换行避免窄屏错版。
 - [thinking 混入正文] → anthropic 适配器识别 `thinking_delta` 即丢弃，openai 适配器忽略 thinking 字段。
 - [流式取消] → 本期不支持流式中断（明确 Non-Goal），退出时通过 `task.cancel()` + `async with` 上下文清理 SDK 流。

@@ -2,7 +2,7 @@
 
 ## Why
 
-step2 工具系统已验收，但 `tool` 数据结构有两层"乱"：
+tool-system 工具系统已验收，但 `tool` 数据结构有两层"乱"：
 
 1. **类型住错地方（依赖方向倒）**：协议无关的共享类型（`Message`/`StreamEvent`/`ToolCall`/`ToolResult`/`ToolDefinition`/`ROLE_*`/`dumps_tool_input`）全堆在 `llm/` 里——它们自己的文档都自称"协议无关"，却住在一个叫 `llm` 的包里。这逼着 `tool/`（文档自称"零外部依赖，不感知 LLM 协议"，却在 `tool/__init__.py:13` `from furflycode.llm import ToolDefinition`）和 `conversation.py`、`agent` 全部反向依赖 `llm/`。`llm/` 一身两职：既是 LLM 适配器，又当全工程共享词汇库。
 2. **每个工具重复样板**：6 个工具各写"解析 JSON → 取参 → 缺参检查"三件套；共享的 `_parse_args` 寄居叶子工具 `read_file.py:68` 被另外 5 个反向导入；返回 `dict | Result` 联合类型逼出每处 `isinstance(data, Result)` 判空；schema 的 `required` 与手写缺参检查两处事实源。
@@ -20,7 +20,7 @@ step2 工具系统已验收，但 `tool` 数据结构有两层"乱"：
 
 ### Modified Capabilities
 
-<!-- 留空：行为零变化，不改任何 spec 级需求。step3 落在 step2 spec F1/F5/F9/N4 内，不改 spec 与验收标准 -->
+<!-- 留空：行为零变化，不改任何 spec 级需求。本次重构落在 tool-system 的工具抽象/工具执行/结构化错误/健壮性需求内，不改 spec 与验收标准 -->
 
 ## Impact
 
