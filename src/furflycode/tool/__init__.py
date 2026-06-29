@@ -1,7 +1,7 @@
 """工具系统 — 统一抽象、注册中心与执行入口。
 
 零 furflycode 依赖，不感知 LLM 协议（``ToolDefinition`` 本地定义）。
-所有失败包成 ``Result(is_error=True)`` 返回，从不抛 Python 异常给上层（F1/F9/N4）。
+所有失败包成 ``Result(is_error=True)`` 返回，从不抛 Python 异常给上层。
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
-# 单个工具执行的默认超时秒数（N1，不可配）。
+# 单个工具执行的默认超时秒数（默认，不可配）。
 DEFAULT_TIMEOUT: float = 30.0
 
 
@@ -66,10 +66,10 @@ def _parse_args(args: str) -> dict[str, Any]:
 
 
 class BaseTool(ABC):
-    """工具统一抽象与共享实现基类（F1）。
+    """工具统一抽象与共享实现基类。
 
     子类实现 name/description/parameters/run；execute 由本类统一提供
-    "解析参数 + 必填校验 + 分发到 run" 模板。所有失败包成 Result 返回（N4），
+    "解析参数 + 必填校验 + 分发到 run" 模板。所有失败包成 Result 返回，
     从不抛 Python 异常给上层。
 
     设计取舍：不再单设 Tool Protocol 层——契约职责由 ABC 的 @abstractmethod
@@ -104,7 +104,7 @@ class BaseTool(ABC):
     async def execute(self, args: str) -> Result:
         """模板：解析 raw JSON → 按 schema required 校验缺失/null → 分发到 run。
 
-        解析失败、非对象、必填缺失/null 均包成 Result 返回（N4，不外抛）。
+        解析失败、非对象、必填缺失/null 均包成 Result 返回（不外抛）。
         超时由 Registry 层 asyncio.wait_for 控制。
         """
         try:
@@ -155,7 +155,7 @@ class Registry:
         return self._tools.get(name)
 
     def definitions(self) -> list[ToolDefinition]:
-        """按注册顺序导出全部工具定义（F3/AC1）。"""
+        """按注册顺序导出全部工具定义。"""
         return [
             ToolDefinition(
                 name=n,
@@ -168,7 +168,7 @@ class Registry:
     async def execute(
         self, name: str, args: str, timeout: float = DEFAULT_TIMEOUT
     ) -> Result:
-        """按名执行工具，受超时保护；任何失败都包成 Result 返回（F5/F9）。
+        """按名执行工具，受超时保护；任何失败都包成 Result 返回。
 
         未知工具、超时、执行异常均转为 ``Result(is_error=True)``。
         """

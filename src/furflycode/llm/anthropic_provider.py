@@ -122,7 +122,7 @@ class AnthropicProvider:
     ) -> AsyncIterator[StreamEvent]:
         """
         通过 Anthropic Messages API 流式发起一次对话轮次。
-        思考增量会被静默丢弃；工具调用在流结束后一次性上抛（F4）。
+        思考增量会被静默丢弃；工具调用在流结束后一次性上抛。
         """
         api_msgs = _to_anthropic_messages(msgs)
 

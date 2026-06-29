@@ -33,7 +33,7 @@ class EditFileTool(BaseTool):
         }
 
     async def run(self, args: dict[str, Any]) -> Result:
-        """执行唯一匹配替换；0/多匹配返回可区分错误（AC4）。缺参由基类兜。"""
+        """执行唯一匹配替换；0/多匹配返回可区分错误。缺参由基类兜。"""
         path_str = args.get("path", "")
         old_string = args.get("old_string", "")
         new_string = args.get("new_string", "")

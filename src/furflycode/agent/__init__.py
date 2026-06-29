@@ -86,7 +86,7 @@ class Agent:
         """执行单轮闭环，async generator 吐出事件流。
 
         调用方 cancel() 该 task 即终止；工具执行经 asyncio.wait_for 受
-        DEFAULT_TIMEOUT 约束（N1）。
+        DEFAULT_TIMEOUT 约束。
         """
         defs = self._registry.definitions()
 
@@ -114,7 +114,7 @@ class Agent:
         # ─── 有工具调用：落 assistant 工具调用回合 ───
         conv.add_assistant_with_tool_calls(preamble, calls)
 
-        # ─── 顺序执行每个调用（单轮内多工具顺序执行，F5） ───
+        # ─── 顺序执行每个调用（单轮内多工具顺序执行） ───
         results: list[ToolResult] = []
         for call in calls:
             yield Event(
@@ -146,7 +146,7 @@ class Agent:
         # ─── 结果回灌 ───
         conv.add_tool_results(results)
 
-        # ─── 请求#2：续答（最终文本）；忽略其返回的工具调用（单轮，AC9） ───
+        # ─── 请求#2：续答（最终文本）；忽略其返回的工具调用（单轮） ───
         final = ""
         async for ev in self._provider.stream(conv.messages(), defs):
             if ev.err is not None:
@@ -156,7 +156,7 @@ class Agent:
                 final += ev.text
                 yield Event(text=ev.text)
             if ev.tool_calls:
-                # 单轮上限：不再发起新一轮工具执行（AC9）。
+                # 单轮上限：不再发起新一轮工具执行。
                 continue
             if ev.done:
                 break

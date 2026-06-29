@@ -7,7 +7,7 @@ from typing import Any
 
 from furflycode.tool import BaseTool, Result, _truncate
 
-# 命令输出上限（N5/AC13）。
+# 命令输出上限。
 _MAX_LINES = 10000
 _MAX_CHARS = 30000
 

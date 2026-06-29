@@ -7,7 +7,7 @@ from typing import Any
 
 from furflycode.tool import BaseTool, Result, _truncate
 
-# 读文件上限（N5/AC2/AC13）。
+# 读文件上限。
 _MAX_LINES = 2000
 _MAX_CHARS = 256 * 1024  # 256KB
 

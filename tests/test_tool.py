@@ -1,4 +1,4 @@
-"""tool 包单测 — 注册中心与 6 个核心工具（AC1–AC6）。"""
+"""tool 包单测 — 注册中心与 6 个核心工具。"""
 
 from __future__ import annotations
 
@@ -21,11 +21,11 @@ def _args(**kwargs: object) -> str:
     return json.dumps(kwargs)
 
 
-# ────────────── 注册中心（AC1） ──────────────
+# ────────────── 注册中心 ──────────────
 
 
 def test_registry_definitions_six_ordered():
-    """导出恰好 6 条工具定义且按注册顺序（AC1）。"""
+    """导出恰好 6 条工具定义且按注册顺序。"""
     reg = new_default_registry()
     defs = reg.definitions()
     names = [d.name for d in defs]
@@ -50,7 +50,7 @@ def test_registry_duplicate_register_raises():
         reg.register(ReadFileTool())
 
 
-# ────────────── read_file（AC2） ──────────────
+# ────────────── read_file ──────────────
 
 
 async def test_read_file_with_line_numbers(tmp_path: Path):
@@ -73,7 +73,7 @@ async def test_read_file_directory_is_error(tmp_path: Path):
     assert "目录" in r.content
 
 
-# ────────────── write_file（AC3） ──────────────
+# ────────────── write_file ──────────────
 
 
 async def test_write_file_creates_nested(tmp_path: Path):
@@ -91,7 +91,7 @@ async def test_write_file_overrides(tmp_path: Path):
     assert f.read_text(encoding="utf-8") == "new"
 
 
-# ────────────── edit_file（AC4） ──────────────
+# ────────────── edit_file ──────────────
 
 
 async def test_edit_file_unique_replace(tmp_path: Path):
@@ -127,7 +127,7 @@ async def test_edit_file_multiple_match_distinguishable(tmp_path: Path):
     assert r.content != "未找到匹配的内容"
 
 
-# ────────────── bash（AC5/N1） ──────────────
+# ────────────── bash ──────────────
 
 
 async def test_bash_echo():
@@ -146,7 +146,7 @@ async def test_bash_timeout_via_registry():
     assert "超时" in r.content
 
 
-# ────────────── glob / grep（AC6） ──────────────
+# ────────────── glob / grep ──────────────
 
 
 async def test_glob_matches_py():

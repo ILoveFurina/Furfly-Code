@@ -37,7 +37,7 @@ class ToolDisplay:
 
 
 async def consume_agent_events(app: furflycodeApp) -> None:
-    """消费 agent.run 产出的事件流，实时更新 UI（F8/N2）。
+    """消费 agent.run 产出的事件流，实时更新 UI。
 
     Launched as an asyncio.Task from the App.
     """

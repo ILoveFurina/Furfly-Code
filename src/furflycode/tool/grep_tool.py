@@ -9,7 +9,7 @@ from typing import Any
 
 from furflycode.tool import BaseTool, Result
 
-# 命中上限（N5）。
+# 命中上限。
 _MAX_HITS = 100
 # 单行长度上限，超出标注未完整搜索。
 _MAX_LINE_LEN = 1024 * 1024

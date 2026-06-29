@@ -1,4 +1,4 @@
-"""agent 包单测 — fake provider 驱动单轮闭环（AC8/AC9）。"""
+"""agent 包单测 — fake provider 驱动单轮闭环。"""
 
 from __future__ import annotations
 
@@ -66,7 +66,7 @@ async def _events_async(agent: Agent, conv: Conversation) -> list[Event]:
 
 
 async def test_single_turn_tool_loop_ac8():
-    """请求#1 调 read_file、请求#2 给最终文本 → 含 START/END + 最终文本（AC8）。"""
+    """请求#1 调 read_file、请求#2 给最终文本 → 含 START/END + 最终文本。"""
     conv = Conversation()
     conv.add_user("读 a.txt 并总结")
     # 请求#1：先吐 preamble 文本，再吐工具调用，再 done
@@ -112,7 +112,7 @@ async def test_single_turn_tool_loop_ac8():
 
 
 async def test_single_turn_cap_ac9():
-    """请求#2 仍 yield 工具调用 → 只执行一次工具，不发起第二轮（AC9）。"""
+    """请求#2 仍 yield 工具调用 → 只执行一次工具，不发起第二轮。"""
     conv = Conversation()
     conv.add_user("两步任务")
     script1 = [

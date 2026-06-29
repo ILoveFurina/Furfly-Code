@@ -8,7 +8,7 @@ from typing import Any
 
 from furflycode.tool import BaseTool, Result
 
-# 结果上限（N5）。
+# 结果上限。
 _MAX_RESULTS = 100
 
 

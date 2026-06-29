@@ -39,7 +39,7 @@ class ToolResult:
     属性：
         tool_call_id: 对应 ToolCall.id。
         content: 执行产出（成功内容或结构化错误文本）。
-        is_error: 是否为错误结果（F9）。
+        is_error: 是否为错误结果。
     """
 
     tool_call_id: str
