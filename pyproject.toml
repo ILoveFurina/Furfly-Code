@@ -22,7 +22,7 @@ build-backend = "hatchling.build"
 packages = ["src/furflycode"]
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.6", "mypy>=1.10"]
 
 [tool.ruff]
 target-version = "py312"
@@ -33,3 +33,4 @@ select = ["E", "F", "I", "N", "W"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
