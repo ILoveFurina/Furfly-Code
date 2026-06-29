@@ -5,11 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from furflycode.tool import Result
-from furflycode.tool.read_file import _parse_args
+from furflycode.tool import BaseTool, Result
 
 
-class EditFileTool:
+class EditFileTool(BaseTool):
     """对原文片段做唯一匹配替换；匹配数不为 1 时返回可区分错误。"""
 
     def name(self) -> str:
@@ -33,20 +32,13 @@ class EditFileTool:
             "required": ["path", "old_string", "new_string"],
         }
 
-    async def execute(self, args: str) -> Result:
-        """执行唯一匹配替换；0/多匹配返回可区分错误（AC4）。"""
-        data = _parse_args(args)
-        if isinstance(data, Result):
-            return data
-        path_str = data.get("path")
-        old_string = data.get("old_string")
-        new_string = data.get("new_string")
+    async def run(self, args: dict[str, Any]) -> Result:
+        """执行唯一匹配替换；0/多匹配返回可区分错误（AC4）。缺参由基类兜。"""
+        path_str = args.get("path", "")
+        old_string = args.get("old_string", "")
+        new_string = args.get("new_string", "")
         if not path_str:
             return Result(is_error=True, content="缺少必填参数: path")
-        if old_string is None:
-            return Result(is_error=True, content="缺少必填参数: old_string")
-        if new_string is None:
-            return Result(is_error=True, content="缺少必填参数: new_string")
 
         path = Path(path_str)
         try:

@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
-from furflycode.tool import Result, _truncate
+from furflycode.tool import BaseTool, Result, _truncate
 
 # 读文件上限（N5/AC2/AC13）。
 _MAX_LINES = 2000
 _MAX_CHARS = 256 * 1024  # 256KB
 
 
-class ReadFileTool:
+class ReadFileTool(BaseTool):
     """读取指定路径的文件文本，带行号返回。"""
 
     def name(self) -> str:
@@ -37,12 +36,9 @@ class ReadFileTool:
             "required": ["path"],
         }
 
-    async def execute(self, args: str) -> Result:
-        """读文件；空 args 当 ``"{}"``。"""
-        data = _parse_args(args)
-        if isinstance(data, Result):
-            return data
-        path_str = data.get("path")
+    async def run(self, args: dict[str, Any]) -> Result:
+        """读文件；缺参由基类兜，此处只做值校验与读取。"""
+        path_str = args.get("path", "")
         if not path_str:
             return Result(is_error=True, content="缺少必填参数: path")
         path = Path(path_str)
@@ -63,20 +59,3 @@ class ReadFileTool:
         # 生成器表达式
         numbered = "\n".join(f"{n:6d}\t{line}" for n, line in enumerate(lines, 1))
         return Result(content=_truncate(numbered, _MAX_LINES, _MAX_CHARS))
-
-
-def _parse_args(args: str) -> dict[str, Any] | Result:
-    """
-    解析 raw JSON 参数字符串；空串归一为 ``"{}"``。失败返回 Result 错误。
-    args.strip(): 删除字符串前后的空白（包括空格、制表符和换行符）
-    json.loads(s) s如果是 "" 或者是 "  "会报错 JSONDecodeError
-    """
-    if not args or not args.strip():
-        args = "{}"
-    try:
-        data = json.loads(args)
-    except json.JSONDecodeError as e:
-        return Result(is_error=True, content=f"参数 JSON 解析失败: {e}")
-    if not isinstance(data, dict):
-        return Result(is_error=True, content="参数必须是 JSON 对象")
-    return data

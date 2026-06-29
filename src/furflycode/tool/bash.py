@@ -5,14 +5,14 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from furflycode.tool import Result, _truncate
+from furflycode.tool import BaseTool, Result, _truncate
 
 # 命令输出上限（N5/AC13）。
 _MAX_LINES = 10000
 _MAX_CHARS = 30000
 
 
-class BashTool:
+class BashTool(BaseTool):
     """执行 shell 命令，返回 stdout/stderr/exit_code。"""
 
     def name(self) -> str:
@@ -36,17 +36,12 @@ class BashTool:
             "required": ["command"],
         }
 
-    async def execute(self, args: str) -> Result:
+    async def run(self, args: dict[str, Any]) -> Result:
         """执行命令；超时由 Registry 层 asyncio.wait_for 兜底。
 
         非零退出按结果回灌让模型判断，不设 is_error。
         """
-        from furflycode.tool.read_file import _parse_args
-
-        data = _parse_args(args)
-        if isinstance(data, Result):
-            return data
-        command = data.get("command")
+        command = args.get("command", "")
         if not command:
             return Result(is_error=True, content="缺少必填参数: command")
 

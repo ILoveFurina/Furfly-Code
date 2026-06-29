@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from furflycode.tool import Result
+from furflycode.tool import BaseTool, Result
 
 # 命中上限（N5）。
 _MAX_HITS = 100
@@ -15,7 +15,7 @@ _MAX_HITS = 100
 _MAX_LINE_LEN = 1024 * 1024
 
 
-class GrepTool:
+class GrepTool(BaseTool):
     """按 Python 正则在文件内容中检索，返回 file:line:content 命中列表。"""
 
     def name(self) -> str:
@@ -48,14 +48,9 @@ class GrepTool:
             "required": ["pattern"],
         }
 
-    async def execute(self, args: str) -> Result:
-        """执行 grep；正则非法为 is_error，无命中非 is_error。"""
-        from furflycode.tool.read_file import _parse_args
-
-        data = _parse_args(args)
-        if isinstance(data, Result):
-            return data
-        pattern = data.get("pattern")
+    async def run(self, args: dict[str, Any]) -> Result:
+        """执行 grep；正则非法为 is_error，无命中非 is_error。缺参由基类兜。"""
+        pattern = args.get("pattern", "")
         if not pattern:
             return Result(is_error=True, content="缺少必填参数: pattern")
         try:
@@ -63,10 +58,10 @@ class GrepTool:
         except re.error as e:
             return Result(is_error=True, content=f"正则非法: {e}")
 
-        root = Path(data.get("path") or ".")
+        root = Path(args.get("path") or ".")
         if not root.exists():
             return Result(is_error=True, content=f"根目录不存在: {root}")
-        name_glob = data.get("glob") or "*"
+        name_glob = args.get("glob") or "*"
 
         hits: list[str] = []
         truncated = False

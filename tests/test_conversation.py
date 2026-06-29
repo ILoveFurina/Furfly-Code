@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from furflycode.conversation import Conversation
-from furflycode.llm import ToolCall, ToolResult
+from furflycode.message import ToolCall, ToolResult
 
 
 def test_empty_conversation():

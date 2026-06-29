@@ -6,13 +6,13 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
-from furflycode.tool import Result
+from furflycode.tool import BaseTool, Result
 
 # 结果上限（N5）。
 _MAX_RESULTS = 100
 
 
-class GlobTool:
+class GlobTool(BaseTool):
     """按 glob 模式（如 ``**/*.py``）返回匹配的文件路径列表。"""
 
     def name(self) -> str:
@@ -40,17 +40,12 @@ class GlobTool:
             "required": ["pattern"],
         }
 
-    async def execute(self, args: str) -> Result:
-        """执行 glob；无匹配返回空说明（非 is_error）。"""
-        from furflycode.tool.read_file import _parse_args
-
-        data = _parse_args(args)
-        if isinstance(data, Result):
-            return data
-        pattern = data.get("pattern")
+    async def run(self, args: dict[str, Any]) -> Result:
+        """执行 glob；无匹配返回空说明（非 is_error）。缺参由基类兜。"""
+        pattern = args.get("pattern", "")
         if not pattern:
             return Result(is_error=True, content="缺少必填参数: pattern")
-        root = Path(data.get("path") or ".")
+        root = Path(args.get("path") or ".")
         if not root.exists():
             return Result(is_error=True, content=f"根目录不存在: {root}")
 

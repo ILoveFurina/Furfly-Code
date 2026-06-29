@@ -1,16 +1,16 @@
 """工具系统 — 统一抽象、注册中心与执行入口。
 
-零外部依赖，不感知 LLM 协议。所有失败包成 ``Result(is_error=True)``
-返回，从不抛 Python 异常给上层（F1/F9/N4）。
+零 furflycode 依赖，不感知 LLM 协议（``ToolDefinition`` 本地定义）。
+所有失败包成 ``Result(is_error=True)`` 返回，从不抛 Python 异常给上层（F1/F9/N4）。
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Protocol, runtime_checkable
-
-from furflycode.llm import ToolDefinition
+from typing import Any
 
 # 单个工具执行的默认超时秒数（N1，不可配）。
 DEFAULT_TIMEOUT: float = 30.0
@@ -29,25 +29,92 @@ class Result:
     is_error: bool = False
 
 
-@runtime_checkable
-class Tool(Protocol):
-    """统一工具抽象（F1）。"""
+@dataclass
+class ToolDefinition:
+    """注册中心导出的协议无关工具定义。
 
+    属性：
+        name: 工具名。
+        description: 给模型的用途说明。
+        input_schema: 完整 JSON Schema（type/properties/required）。
+    """
+
+    name: str
+    description: str
+    input_schema: dict[str, Any]
+
+
+class ToolInputError(ValueError):
+    """工具入参 JSON 解析/类型校验失败（由 BaseTool.execute 捕获包成 Result）。"""
+
+
+def _parse_args(args: str) -> dict[str, Any]:
+    """解析 raw JSON 参数字符串；空串归一为 ``"{}"``。失败抛 ToolInputError。
+
+    args.strip(): 删除字符串前后的空白（包括空格、制表符和换行符）
+    json.loads(s) s如果是 "" 或者是 "  "会报错 JSONDecodeError
+    """
+    if not args or not args.strip():
+        return {}
+    try:
+        data = json.loads(args)
+    except json.JSONDecodeError as e:
+        raise ToolInputError(f"参数 JSON 解析失败: {e}") from e
+    if not isinstance(data, dict):
+        raise ToolInputError("参数必须是 JSON 对象")
+    return data
+
+
+class BaseTool(ABC):
+    """工具统一抽象与共享实现基类（F1）。
+
+    子类实现 name/description/parameters/run；execute 由本类统一提供
+    "解析参数 + 必填校验 + 分发到 run" 模板。所有失败包成 Result 返回（N4），
+    从不抛 Python 异常给上层。
+
+    设计取舍：不再单设 Tool Protocol 层——契约职责由 ABC 的 @abstractmethod
+    + mypy override 签名校验承担；全工程工具均继承本类，无鸭子类型工具。
+    """
+
+    @abstractmethod
     def name(self) -> str:
         """模型看到的工具名，如 "read_file"。"""
         ...
 
+    @abstractmethod
     def description(self) -> str:
         """给模型的用途说明。"""
         ...
 
+    @abstractmethod
     def parameters(self) -> dict[str, Any]:
         """手写 JSON Schema（type/properties/required/description）。"""
         ...
 
-    async def execute(self, args: str) -> Result:
-        """执行工具。args 为 raw JSON 字符串；超时由外部 asyncio.wait_for 控制。"""
+    @abstractmethod
+    async def run(self, args: dict[str, Any]) -> Result:
+        """业务实现。
+
+        基类 execute 已解析 raw JSON 并按 schema 的 required 校验缺失/null，
+        故 args 必含所有必填键且非 None。子类只需做值校验（空串/格式/存在性等）
+        与实际执行，返回 Result。
+        """
         ...
+
+    async def execute(self, args: str) -> Result:
+        """模板：解析 raw JSON → 按 schema required 校验缺失/null → 分发到 run。
+
+        解析失败、非对象、必填缺失/null 均包成 Result 返回（N4，不外抛）。
+        超时由 Registry 层 asyncio.wait_for 控制。
+        """
+        try:
+            data = _parse_args(args)
+        except ToolInputError as e:
+            return Result(is_error=True, content=str(e))
+        for key in self.parameters().get("required", []):
+            if data.get(key) is None:
+                return Result(is_error=True, content=f"缺少必填参数: {key}")
+        return await self.run(data)
 
 
 def _truncate(s: str, max_lines: int, max_chars: int) -> str:
@@ -73,9 +140,9 @@ class Registry:
 
     def __init__(self) -> None:
         self._order: list[str] = []  # 保持注册顺序，导出稳定
-        self._tools: dict[str, Tool] = {}
+        self._tools: dict[str, BaseTool] = {}
 
-    def register(self, tool: Tool) -> None:
+    def register(self, tool: BaseTool) -> None:
         """登记一个工具；重名抛 ValueError。"""
         name = tool.name()
         if name in self._tools:
@@ -83,7 +150,7 @@ class Registry:
         self._tools[name] = tool
         self._order.append(name)
 
-    def get(self, name: str) -> Tool | None:
+    def get(self, name: str) -> BaseTool | None:
         """按名查找工具；未命中返回 None。"""
         return self._tools.get(name)
 
@@ -136,7 +203,9 @@ def new_default_registry() -> Registry:
 
 
 __all__ = [
-    "Tool",
+    "BaseTool",
+    "ToolInputError",
+    "ToolDefinition",
     "Result",
     "Registry",
     "new_default_registry",

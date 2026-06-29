@@ -7,8 +7,14 @@ from typing import Any
 
 from furflycode.agent import Agent, Event, Phase
 from furflycode.conversation import Conversation
-from furflycode.llm import StreamEvent, ToolCall, ToolDefinition
-from furflycode.tool import new_default_registry
+from furflycode.message import StreamEvent, ToolCall
+from furflycode.tool import (
+    BaseTool,
+    Registry,
+    Result,
+    ToolDefinition,
+    new_default_registry,
+)
 
 
 class FakeProvider:
@@ -127,7 +133,7 @@ async def test_single_turn_cap_ac9():
     # 用 fake 工具替换 bash 以计数执行次数
     call_count = {"n": 0}
 
-    class CountingBash:
+    class CountingBash(BaseTool):
         def name(self) -> str:
             return "bash"
 
@@ -137,13 +143,9 @@ async def test_single_turn_cap_ac9():
         def parameters(self) -> dict[str, Any]:
             return {"type": "object", "properties": {}}
 
-        async def execute(self, args: str):
-            from furflycode.tool import Result
-
+        async def run(self, args: dict[str, Any]) -> Result:
             call_count["n"] += 1
             return Result(content=f"exec#{call_count['n']}")
-
-    from furflycode.tool import Registry
 
     reg = Registry()
     reg.register(CountingBash())

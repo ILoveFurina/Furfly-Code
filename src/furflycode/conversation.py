@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from furflycode.llm import (
+from furflycode.message import (
     ROLE_ASSISTANT,
+    ROLE_TOOL,
     ROLE_USER,
     Message,
     ToolCall,
@@ -36,7 +37,7 @@ class Conversation:
 
     def add_tool_results(self, results: list[ToolResult]) -> None:
         """追加一条工具结果回合（ROLE_TOOL）。"""
-        self._messages.append(Message(role="tool", tool_results=list(results)))
+        self._messages.append(Message(role=ROLE_TOOL, tool_results=list(results)))
 
     def messages(self) -> list[Message]:
         """返回消息历史的浅拷贝。"""

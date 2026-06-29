@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
-from furflycode.tool import Result
-from furflycode.tool.read_file import _parse_args
+from furflycode.tool import BaseTool, Result
 
 
-class WriteFileTool:
+class WriteFileTool(BaseTool):
     """写入（覆盖）文件；父目录不存在时自动创建。"""
 
     def name(self) -> str:
@@ -36,20 +36,13 @@ class WriteFileTool:
             "required": ["path", "content"],
         }
 
-    async def execute(self, args: str) -> Result:
-        """写文件；解析失败、缺参、写入失败均包成 Result。"""
-        data = _parse_args(args)
-        if isinstance(data, Result):
-            return data
-        path_str = data.get("path")
-        content = data.get("content")
+    async def run(self, args: dict[str, Any]) -> Result:
+        """写文件；缺参由基类兜，空 path 在此拦截，content 允许空串。"""
+        path_str = args.get("path", "")
+        content = args.get("content", "")
         if not path_str:
             return Result(is_error=True, content="缺少必填参数: path")
-        if content is None:
-            return Result(is_error=True, content="缺少必填参数: content")
         try:
-            from pathlib import Path
-
             path = Path(path_str)
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding="utf-8")

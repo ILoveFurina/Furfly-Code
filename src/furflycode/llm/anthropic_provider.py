@@ -9,17 +9,17 @@ from typing import TYPE_CHECKING, Any
 
 import anthropic
 
-from furflycode.llm import (
+from furflycode.message import (
     ROLE_ASSISTANT,
     ROLE_TOOL,
     ROLE_USER,
     Message,
     StreamEvent,
     ToolCall,
-    ToolDefinition,
     dumps_tool_input,
 )
 from furflycode.prompt import SYSTEM_PROMPT
+from furflycode.tool import ToolDefinition
 
 if TYPE_CHECKING:
     from furflycode.config import ProviderConfig
@@ -151,8 +151,8 @@ class AnthropicProvider:
                             continue
                         if delta.type == "text_delta":
                             yield StreamEvent(text=delta.text)
-                #区别于OpenAI只能代码累加，Anthropic的SDK上下文管理自带累加器
-                #Anthropic提供了一个get_final_message()取得最终完整的message对象
+                # 区别于OpenAI只能代码累加，Anthropic的SDK上下文管理自带累加器
+                # Anthropic提供了一个get_final_message()取得最终完整的message对象
                 final_message = await stream.get_final_message()
                 if final_message.stop_reason == "tool_use":
                     calls: list[ToolCall] = []

@@ -8,15 +8,15 @@ from typing import TYPE_CHECKING, Any
 
 import openai
 
-from furflycode.llm import (
+from furflycode.message import (
     ROLE_ASSISTANT,
     ROLE_TOOL,
     Message,
     StreamEvent,
     ToolCall,
-    ToolDefinition,
 )
 from furflycode.prompt import SYSTEM_PROMPT
+from furflycode.tool import ToolDefinition
 
 if TYPE_CHECKING:
     from furflycode.config import ProviderConfig
