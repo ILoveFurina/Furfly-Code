@@ -18,10 +18,10 @@
 ## 集成
 - [x] 两协议工具流程一致：anthropic 与 openai（含兼容 `base_url`）跑同一组工具任务，触发/展示/回灌/错误行为一致（验证：两种配置各跑「读 X 并总结」）。(AC10/F3/F7/N3)
 - [x] 结果回灌进历史并被第二轮请求携带：assistant tool_use 回合 + tool_result 回合出现在续答上下文（验证：`tests/test_agent.py` 断言 `conv.messages()` 末尾序列；或抓请求体）。(F6)
-- [ ] 工具执行不阻塞界面：执行期间动态区显示 `● name(args)` + Running… 指示，界面可响应（验证：跑一个稍慢的 bash，观察界面持续刷新不冻结，asyncio event loop 不卡顿）。(N2)
-- [ ] scrollback 顺序正确：preamble 文本 → 工具行 → 结果摘要 → 最终答复 按序出现不交错（验证：多工具任务后回滚查看顺序；Python 单 event loop 内 `RichLog.write` 同步追加保序）。(F8)
-- [ ] 结果体量受控：读大文件 / 长输出 bash / 海量 grep 命中被工具级上限截断并标注 `[truncated]`，不撑爆界面/上下文（验证：读一个 >2000 行文件、跑长输出命令观察截断）。(AC13/N5)
-- [ ] 系统提示词体现 Agent 角色：问「你能做什么」答复提及可用工具能力（验证：发一条询问，观察答复）。(F3)
+- [x] 工具执行不阻塞界面：执行期间动态区显示 `● name(args)` + Running… 指示，界面可响应（验证：跑一个稍慢的 bash，观察界面持续刷新不冻结，asyncio event loop 不卡顿）。(N2)
+- [x] scrollback 顺序正确：preamble 文本 → 工具行 → 结果摘要 → 最终答复 按序出现不交错（验证：多工具任务后回滚查看顺序；Python 单 event loop 内 `RichLog.write` 同步追加保序）。(F8)
+- [x] 结果体量受控：读大文件 / 长输出 bash / 海量 grep 命中被工具级上限截断并标注 `[truncated]`，不撑爆界面/上下文（验证：读一个 >2000 行文件、跑长输出命令观察截断）。(AC13/N5)
+- [x] 系统提示词体现 Agent 角色：问「你能做什么」答复提及可用工具能力（验证：发一条询问，观察答复）。(F3)
 
 ## 编译与测试
 - [x] `python -m furflycode` 能正常启动（在合法配置下进入 TUI）。
@@ -29,7 +29,7 @@
 - [x] `ruff format --check .` 通过（或本地 `ruff format .` 已统一格式）。
 - [x] `pytest -v` 通过（`tests/test_config.py`、`tests/test_conversation.py`、`tests/test_tool.py`、`tests/test_agent.py`）。
 - [ ] （可选）`mypy src/furflycode` 通过。
-- [ ] 密钥不回显/不打印：对话区与任何输出均不出现 `api_key`（验证：通读运行输出、检索无明文 key）。(N6)
+- [x] 密钥不回显/不打印：对话区与任何输出均不出现 `api_key`（验证：通读运行输出、检索无明文 key）。(N6)
 
 ## 端到端场景
 - [x] 场景 1（读文件并总结）：openai 兼容端点 → 问「读 docs/features/step2.工具系统/spec.md 用一句话总结」→ `● read_file(...)` 工具行 + 结果摘要 + 最终 markdown 答复 → `/exit` 退出，终端无残留。
