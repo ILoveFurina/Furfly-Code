@@ -28,15 +28,26 @@ if TYPE_CHECKING:
 
 
 def _to_anthropic_tools(tools: list[ToolDefinition]) -> list[dict[str, Any]]:
-    """把协议无关 ToolDefinition 列表转为 Anthropic tools 参数。"""
-    return [
-        {
+    """把协议无关 ToolDefinition 列表转为 Anthropic tools 参数。
+
+    工具级硬约束（hard_constraints）拼进 description 末尾，作为单一事实来源；
+    末个工具挂 cache_control: ephemeral 作为工具 Schema 静态区域的缓存断点②。
+    """
+    api_tools: list[dict[str, Any]] = []
+    for i, t in enumerate(tools):
+        description = t.description
+        if t.hard_constraints:
+            description = f"{description}\n\n硬性约束：{t.hard_constraints}"
+        entry: dict[str, Any] = {
             "name": t.name,
-            "description": t.description,
+            "description": description,
             "input_schema": t.input_schema,
         }
-        for t in tools
-    ]
+        # 末个工具挂缓存断点②（覆盖工具 Schema 静态区域，D2）。
+        if i == len(tools) - 1:
+            entry["cache_control"] = {"type": "ephemeral"}
+        api_tools.append(entry)
+    return api_tools
 
 
 def _has_tool_history(msgs: list[Message]) -> bool:
@@ -130,7 +141,15 @@ class AnthropicProvider:
         params: dict[str, Any] = {
             "model": self._model,
             "max_tokens": 4096,
-            "system": SYSTEM_PROMPT,
+            # system 作为带 cache_control 的 text 块（断点①），承载七模块拼装的
+            # 静态系统提示，严格前缀匹配复用 KV 缓存（D1/D2）。
+            "system": [
+                {
+                    "type": "text",
+                    "text": SYSTEM_PROMPT,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
             "messages": api_msgs,
         }
         if tools:

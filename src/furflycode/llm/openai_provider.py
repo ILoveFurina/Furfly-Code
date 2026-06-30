@@ -24,18 +24,27 @@ if TYPE_CHECKING:
 
 
 def _to_openai_tools(tools: list[ToolDefinition]) -> list[dict[str, Any]]:
-    """把协议无关 ToolDefinition 列表转为 OpenAI tools 参数。"""
-    return [
-        {
-            "type": "function",
-            "function": {
-                "name": t.name,
-                "description": t.description,
-                "parameters": t.input_schema,
-            },
-        }
-        for t in tools
-    ]
+    """把协议无关 ToolDefinition 列表转为 OpenAI tools 参数。
+
+    工具级硬约束（hard_constraints）拼进 description 末尾，作为单一事实来源。
+    OpenAI 走隐式自动缓存，不设显式 cache_control 断点（D1）。
+    """
+    api_tools: list[dict[str, Any]] = []
+    for t in tools:
+        description = t.description
+        if t.hard_constraints:
+            description = f"{description}\n\n硬性约束：{t.hard_constraints}"
+        api_tools.append(
+            {
+                "type": "function",
+                "function": {
+                    "name": t.name,
+                    "description": description,
+                    "parameters": t.input_schema,
+                },
+            }
+        )
+    return api_tools
 
 
 def _to_openai_messages(msgs: list[Message]) -> list[dict[str, Any]]:
