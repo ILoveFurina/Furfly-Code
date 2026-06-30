@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import os
 import sys
+from pathlib import Path
 
 from furflycode.config import ConfigError, load
+from furflycode.context import build_session_context
 from furflycode.tool import new_default_registry
 from furflycode.tui.app import furflycodeApp
 
@@ -23,8 +26,14 @@ def main() -> None:
 
     try:
         registry = new_default_registry()
+        # 会话启动时一次性预读环境信息与 FURFLY.md（向上查找至项目根），
+        # 会话期间复用此快照不重读（D7）。
+        session_context = build_session_context(Path(os.getcwd()))
         app = furflycodeApp(
-            config.providers, registry, max_iterations=config.max_iterations
+            config.providers,
+            registry,
+            max_iterations=config.max_iterations,
+            session_context=session_context,
         )
         app.run()
     except KeyboardInterrupt:

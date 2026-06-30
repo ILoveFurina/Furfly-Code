@@ -18,6 +18,7 @@ from textual.widgets import OptionList, RichLog, Static, TextArea
 
 from furflycode import __version__
 from furflycode.config import ProviderConfig
+from furflycode.context import SessionContext
 from furflycode.conversation import Conversation
 from furflycode.llm import Provider, new_provider
 from furflycode.prompt import render_banner
@@ -137,6 +138,7 @@ class furflycodeApp(App):  # noqa: N801 — 名称由 spec 固定
         providers: list[ProviderConfig],
         registry: Registry | None = None,
         max_iterations: int = 20,
+        session_context: SessionContext | None = None,
     ) -> None:
         super().__init__()
         self.providers = providers
@@ -151,6 +153,8 @@ class furflycodeApp(App):  # noqa: N801 — 名称由 spec 固定
         self._timer: Timer | None = None
         self.plan_mode: bool = False  # Plan Mode：True 只放只读工具
         self.max_iterations = max_iterations  # Agent 循环兜底上限
+        # 会话启动时一次性预读的上下文快照（环境信息 + FURFLY.md），会话期间不重读。
+        self.session_context: SessionContext | None = session_context
 
     # ────────────── layout ──────────────
     def compose(self) -> ComposeResult:

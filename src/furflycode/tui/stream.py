@@ -47,6 +47,7 @@ async def consume_agent_events(app: furflycodeApp) -> None:
         app._tool_registry,
         max_iterations=app.max_iterations,
         plan_mode=app.plan_mode,
+        session_context=app.session_context,
     )
     try:
         async for ev in agent.run(app.conv):
