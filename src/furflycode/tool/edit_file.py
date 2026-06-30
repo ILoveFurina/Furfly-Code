@@ -17,6 +17,12 @@ class EditFileTool(BaseTool):
     def is_read_only(self) -> bool:
         return False
 
+    def hard_constraints(self) -> str:
+        return (
+            "编辑前必须先调用 read_file 读取该文件的当前内容，禁止凭记忆编辑。"
+            "old_string 必须与文件中实际内容逐字一致（含缩进与空白）。"
+        )
+
     def description(self) -> str:
         return (
             "对指定文件中的 old_string 做唯一匹配替换为 new_string。"

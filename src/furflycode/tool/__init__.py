@@ -37,11 +37,14 @@ class ToolDefinition:
         name: 工具名。
         description: 给模型的用途说明。
         input_schema: 完整 JSON Schema（type/properties/required）。
+        hard_constraints: 该工具的硬性约束文本，由适配器边界拼进 description 末尾，
+            作为工具级规则的单一事实来源（系统提示不再重复这些字面）。空串表示无强约束。
     """
 
     name: str
     description: str
     input_schema: dict[str, Any]
+    hard_constraints: str = ""
 
 
 class ToolInputError(ValueError):
@@ -110,6 +113,15 @@ class BaseTool(ABC):
 
         return False
 
+    def hard_constraints(self) -> str:
+        """该工具的硬性约束文本（默认空串，表示无强约束）。
+
+        由适配器边界拼进发往模型的 description 末尾，作为工具级规则的单一事实来源；
+        系统提示不再重复这些字面，避免双重强化。子类按需 override。
+        """
+
+        return ""
+
     async def execute(self, args: str) -> Result:
         """模板：解析 raw JSON → 按 schema required 校验缺失/null → 分发到 run。
 
@@ -170,6 +182,7 @@ class Registry:
                 name=n,
                 description=self._tools[n].description(),
                 input_schema=self._tools[n].parameters(),
+                hard_constraints=self._tools[n].hard_constraints(),
             )
             for n in self._order
         ]
@@ -181,6 +194,7 @@ class Registry:
                 name=n,
                 description=self._tools[n].description(),
                 input_schema=self._tools[n].parameters(),
+                hard_constraints=self._tools[n].hard_constraints(),
             )
             for n in self._order
             if self._tools[n].is_read_only()

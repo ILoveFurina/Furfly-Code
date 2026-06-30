@@ -17,6 +17,12 @@ class WriteFileTool(BaseTool):
     def is_read_only(self) -> bool:
         return False
 
+    def hard_constraints(self) -> str:
+        return (
+            "本工具覆盖写入，会清空文件原有内容。覆盖既有文件前必须先调用 read_file"
+            "确认现有内容，避免误覆盖。仅用于创建新文件或明确要整体替换的场景。"
+        )
+
     def description(self) -> str:
         return (
             "将内容写入指定路径的文件（覆盖已有内容）。父目录不存在时自动创建。"

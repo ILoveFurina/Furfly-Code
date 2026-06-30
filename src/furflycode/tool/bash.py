@@ -21,6 +21,13 @@ class BashTool(BaseTool):
     def is_read_only(self) -> bool:
         return False
 
+    def hard_constraints(self) -> str:
+        return (
+            "禁止用 cat/grep/sed 等原始终端命令读取或编辑文件，改用专用工具："
+            "读文件用 read_file、搜代码用 grep_tool、改文件用 edit_file。"
+            "本工具仅用于执行专用工具无法覆盖的操作（如运行测试、构建、git 命令）。"
+        )
+
     def description(self) -> str:
         return (
             "在工作目录下执行 shell 命令，返回标准输出、标准错误与退出码。"
