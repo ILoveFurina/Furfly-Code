@@ -175,3 +175,24 @@ async def test_grep_bad_regex_is_error():
     r = await GrepTool().execute('{"pattern":"(unclosed","path":"."}')
     assert r.is_error
     assert "正则非法" in r.content
+
+
+# ────────────── 工具安全分级 ──────────────
+
+
+def test_tool_is_read_only_classification():
+    """6 个内置工具按副作用正确分级。"""
+    assert ReadFileTool().is_read_only() is True
+    assert GlobTool().is_read_only() is True
+    assert GrepTool().is_read_only() is True
+    assert WriteFileTool().is_read_only() is False
+    assert EditFileTool().is_read_only() is False
+    assert BashTool().is_read_only() is False
+
+
+def test_registry_definitions_read_only_returns_three():
+    """definitions_read_only 只返只读 3 个。"""
+    reg = new_default_registry()
+    ro = reg.definitions_read_only()
+    names = [d.name for d in ro]
+    assert names == ["read_file", "glob", "grep"]
