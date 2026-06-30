@@ -18,6 +18,9 @@ class GlobTool(BaseTool):
     def name(self) -> str:
         return "glob"
 
+    def is_read_only(self) -> bool:
+        return True
+
     def description(self) -> str:
         return (
             "按 glob 模式列出匹配的文件路径（支持 ** 跨层级）。"

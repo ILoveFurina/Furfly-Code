@@ -23,7 +23,9 @@ def main() -> None:
 
     try:
         registry = new_default_registry()
-        app = furflycodeApp(config.providers, registry)
+        app = furflycodeApp(
+            config.providers, registry, max_iterations=config.max_iterations
+        )
         app.run()
     except KeyboardInterrupt:
         # Ctrl+C 在应用内部已处理；这里兜底捕获异常情况

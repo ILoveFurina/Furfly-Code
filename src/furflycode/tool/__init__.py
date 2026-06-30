@@ -101,6 +101,15 @@ class BaseTool(ABC):
         """
         ...
 
+    def is_read_only(self) -> bool:
+        """是否只读无副作用（默认 False，保守视为有副作用）。
+
+        agent 用于多工具调用安全分批（只读并发、有副作用串行）与 Plan Mode
+        工具子集筛选；不进 ToolDefinition，仅编排层内部用。子类按实际 override。
+        """
+
+        return False
+
     async def execute(self, args: str) -> Result:
         """模板：解析 raw JSON → 按 schema required 校验缺失/null → 分发到 run。
 
@@ -163,6 +172,18 @@ class Registry:
                 input_schema=self._tools[n].parameters(),
             )
             for n in self._order
+        ]
+
+    def definitions_read_only(self) -> list[ToolDefinition]:
+        """按注册顺序导出只读工具定义（供 Plan Mode 限制模型只探查不改）。"""
+        return [
+            ToolDefinition(
+                name=n,
+                description=self._tools[n].description(),
+                input_schema=self._tools[n].parameters(),
+            )
+            for n in self._order
+            if self._tools[n].is_read_only()
         ]
 
     async def execute(

@@ -8,6 +8,7 @@ import time
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from rich.text import Text
 from textual import events
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -128,12 +129,14 @@ class furflycodeApp(App):  # noqa: N801 — 名称由 spec 固定
 
     BINDINGS = [
         Binding("ctrl+c", "quit", "Quit", priority=True),
+        Binding("escape", "cancel_loop", "Cancel", priority=True),
     ]
 
     def __init__(
         self,
         providers: list[ProviderConfig],
         registry: Registry | None = None,
+        max_iterations: int = 20,
     ) -> None:
         super().__init__()
         self.providers = providers
@@ -146,6 +149,8 @@ class furflycodeApp(App):  # noqa: N801 — 名称由 spec 固定
         self._cur_tool: ToolDisplay | None = None  # 执行中工具指示
         self._stream_task: asyncio.Task[None] | None = None
         self._timer: Timer | None = None
+        self.plan_mode: bool = False  # Plan Mode：True 只放只读工具
+        self.max_iterations = max_iterations  # Agent 循环兜底上限
 
     # ────────────── layout ──────────────
     def compose(self) -> ComposeResult:
@@ -204,8 +209,30 @@ class furflycodeApp(App):  # noqa: N801 — 名称由 spec 固定
 
     async def submit(self, text: str) -> None:
         """处理一条用户提交的消息。"""
-        if text.strip() == "/exit":
+        stripped = text.strip()
+        if stripped == "/exit":
             await self.action_quit()
+            return
+        if stripped == "/plan":
+            # 切到 Plan Mode：只放只读工具，模型只探查不改
+            if self.state != SessionState.IDLE or self.provider is None:
+                return
+            self.plan_mode = True
+            self.query_one("#input", PromptInput).text = ""
+            self.query_one("#log", RichLog).write(
+                Text("── PLAN MODE（只读工具）· /do 切回 ──", style="bold yellow")
+            )
+            self._update_statusbar()
+            return
+        if stripped == "/do":
+            if self.state != SessionState.IDLE or self.provider is None:
+                return
+            self.plan_mode = False
+            self.query_one("#input", PromptInput).text = ""
+            self.query_one("#log", RichLog).write(
+                Text("── FULL MODE（全工具）──", style="bold green")
+            )
+            self._update_statusbar()
             return
         if self.state != SessionState.IDLE or self.provider is None:
             # 流式输出中忽略新提交 — 保留已输入的文字
@@ -229,12 +256,40 @@ class furflycodeApp(App):  # noqa: N801 — 名称由 spec 固定
             return
         bar = self.query_one("#statusbar", Static)
         width = max(self.size.width, 20)
-        bar.update(status_bar_text(self.provider.name, self.provider.model, width))
+        bar.update(
+            status_bar_text(
+                self.provider.name, self.provider.model, width, self.plan_mode
+            )
+        )
 
     def on_resize(self, event: events.Resize) -> None:
         self._update_statusbar()
 
-    # ────────────── quit ──────────────
+    # ────────────── cancel / quit ──────────────
+    async def action_cancel_loop(self) -> None:
+        """Esc：循环中取消本轮（区别于 Ctrl+C 退出），复位到 IDLE。"""
+        if self.state != SessionState.STREAMING:
+            return
+        if self._stream_task is not None and not self._stream_task.done():
+            self._stream_task.cancel()
+            try:
+                await self._stream_task
+            except asyncio.CancelledError:
+                pass
+        if self._timer is not None:
+            self._timer.stop()
+            self._timer = None
+        log = self.query_one("#log", RichLog)
+        if self.cur_reply.strip():
+            log.write(Text(self.cur_reply, style="dim"))
+        log.write(Text("  ⏹ 已取消", style="bold yellow"))
+        self._stream_task = None
+        self._cur_tool = None
+        self.cur_reply = ""
+        self.query_one("#streaming", Static).update("")
+        self.state = SessionState.IDLE
+        self.query_one("#input").focus()
+
     async def action_quit(self) -> None:
         if self._stream_task is not None and not self._stream_task.done():
             self._stream_task.cancel()

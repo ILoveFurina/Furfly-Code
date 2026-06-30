@@ -26,6 +26,7 @@ class Config:
     """顶层配置。"""
 
     providers: list[ProviderConfig] = field(default_factory=list)
+    max_iterations: int = 20  # Agent Loop 兜底安全网（可配）
 
 
 class ConfigError(Exception):
@@ -77,7 +78,14 @@ def _from_dict(data: dict) -> Config:
         )
         for p in providers_raw
     ]
-    return Config(providers=providers)
+    max_iterations = data.get("max_iterations", 20)
+    if (
+        not isinstance(max_iterations, int)
+        or isinstance(max_iterations, bool)
+        or max_iterations < 1
+    ):
+        raise ConfigError("max_iterations 必须是正整数")
+    return Config(providers=providers, max_iterations=max_iterations)
 
 
 def load(path: str) -> Config:

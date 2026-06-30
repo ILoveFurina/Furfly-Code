@@ -45,6 +45,7 @@ class Provider(Protocol):
         - 为每个文本增量产出 StreamEvent(text=...)。
         - 丢弃 thinking 增量（不产出）。
         - 本轮模型请求工具时，在 done 之前产出 StreamEvent(tool_calls=...)。
+        - 尽力在 done 前产出 StreamEvent(usage=...)（token 用量，可缺省）。
         - 正常完成时产出 StreamEvent(done=True)。
         - 出错时产出 StreamEvent(err=...)。
         """

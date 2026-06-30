@@ -18,6 +18,9 @@ class BashTool(BaseTool):
     def name(self) -> str:
         return "bash"
 
+    def is_read_only(self) -> bool:
+        return False
+
     def description(self) -> str:
         return (
             "在工作目录下执行 shell 命令，返回标准输出、标准错误与退出码。"

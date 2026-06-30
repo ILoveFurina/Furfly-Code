@@ -42,7 +42,12 @@ async def consume_agent_events(app: furflycodeApp) -> None:
     Launched as an asyncio.Task from the App.
     """
     assert app.provider is not None  # 由 submit 在 provider 非空时调用
-    agent = Agent(app.provider, app._tool_registry)
+    agent = Agent(
+        app.provider,
+        app._tool_registry,
+        max_iterations=app.max_iterations,
+        plan_mode=app.plan_mode,
+    )
     try:
         async for ev in agent.run(app.conv):
             await _dispatch(app, ev)
@@ -76,8 +81,21 @@ async def _dispatch(app: furflycodeApp, ev: Event) -> None:
             app._cur_tool = None
             _refresh_streaming_view(app)
         return
+    if ev.round is not None:
+        u = ev.round.usage
+        if u is not None and (
+            u.input_tokens is not None or u.output_tokens is not None
+        ):
+            tag = (
+                f"  ↻ round {ev.round.iteration}"
+                f" · in={u.input_tokens} out={u.output_tokens}"
+            )
+        else:
+            tag = f"  ↻ round {ev.round.iteration}"
+        app.query_one("#log", RichLog).write(Text(tag, style="dim"))
+        return
     if ev.done:
-        await _finish_with_assistant(app, app.cur_reply)
+        await _finish_with_assistant(app, app.cur_reply, ev.done_reason)
         return
 
 
@@ -109,10 +127,12 @@ def _refresh_streaming_view(app: furflycodeApp) -> None:
         streaming_widget.update(streaming_text(app.cur_reply, elapsed))
 
 
-async def _finish_with_assistant(app: furflycodeApp, reply: str) -> None:
+async def _finish_with_assistant(
+    app: furflycodeApp, reply: str, reason: str = "normal"
+) -> None:
     """Finalize a successful assistant turn.
 
-    会话历史由 agent 维护，这里只负责渲染与状态复位。
+    会话历史由 agent 维护，这里只负责渲染与状态复位。reason 区分收尾原因。
     """
     from furflycode.tui.app import SessionState
 
@@ -120,7 +140,11 @@ async def _finish_with_assistant(app: furflycodeApp, reply: str) -> None:
     if reply.strip():
         log.write(Markdown(reply))
     elapsed = time.monotonic() - app.turn_start
-    log.write(Text(f"  ({elapsed:.1f}s)", style="dim"))
+    reason_tag = {
+        "max_iterations": " · 迭代上限",
+        "unknown_tools": " · 未知工具早停",
+    }.get(reason, "")
+    log.write(Text(f"  ({elapsed:.1f}s{reason_tag})", style="dim"))
     _stop_streaming(app)
     app.state = SessionState.IDLE
     app.query_one("#input").focus()

@@ -21,6 +21,9 @@ class GrepTool(BaseTool):
     def name(self) -> str:
         return "grep"
 
+    def is_read_only(self) -> bool:
+        return True
+
     def description(self) -> str:
         return (
             "按 Python 正则表达式在文件内容中检索，返回命中位置（file:line:content）。"

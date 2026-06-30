@@ -18,6 +18,9 @@ class ReadFileTool(BaseTool):
     def name(self) -> str:
         return "read_file"
 
+    def is_read_only(self) -> bool:
+        return True
+
     def description(self) -> str:
         return (
             "读取指定路径文件的文本内容，返回带行号的文本（行号与内容以制表符分隔）。"

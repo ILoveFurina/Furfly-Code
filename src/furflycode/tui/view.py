@@ -48,18 +48,13 @@ def tool_result_summary(result: str, is_error: bool) -> Padding:
     )
 
 
-def status_bar_text(provider_name: str, model_name: str, width: int) -> Text:
-    """构建双列状态栏：左侧名称，右侧模型。
-
-    参数：
-        provider_name: 左侧显示文本。
-        model_name: 右侧显示文本。
-        width: 用于右对齐的总宽度。
-
-    返回：
-        包含两侧文本的 Rich Text 对象。
-    """
+def status_bar_text(
+    provider_name: str, model_name: str, width: int, plan_mode: bool = False
+) -> Text:
+    """构建双列状态栏：左侧名称（Plan Mode 加标记），右侧模型。"""
     left = f" {provider_name}"
+    if plan_mode:
+        left += "  [PLAN MODE]"
     right = f"{model_name} "
     padding = max(width - len(left) - len(right), 0)
     return Text(left + " " * padding + right)

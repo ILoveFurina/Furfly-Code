@@ -61,18 +61,37 @@ class Message:
 
 
 @dataclass
+class Usage:
+    """单轮流式结束时 provider 回传的 token 用量（尽力而为，均可缺）。
+
+    属性：
+        input_tokens: 输入 token 数。
+        output_tokens: 输出 token 数。
+        cache_read_tokens: 命中缓存读取的 token 数。
+        cache_creation_tokens: 写入缓存的 token 数。
+    """
+
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    cache_read_tokens: int | None = None
+    cache_creation_tokens: int | None = None
+
+
+@dataclass
 class StreamEvent:
     """provider 流式生成器产出的一条事件。
 
-    四态语义：
+    五态语义：
         text: 文本增量（preamble 或最终答复）。
         tool_calls: 非空表示本轮模型请求执行这些工具（在 done 之前发出）。
+        usage: 非空表示本轮 token 用量（在 done 之前产出，尽力而为）。
         done: 当前轮次正常结束。
         err: 错误（与 done 互斥）。
     """
 
     text: str = ""
     tool_calls: list[ToolCall] = field(default_factory=list)
+    usage: Usage | None = None
     done: bool = False
     err: Exception | None = None
 
@@ -87,6 +106,7 @@ __all__ = [
     "StreamEvent",
     "ToolCall",
     "ToolResult",
+    "Usage",
     "ROLE_USER",
     "ROLE_ASSISTANT",
     "ROLE_TOOL",

@@ -14,6 +14,9 @@ class WriteFileTool(BaseTool):
     def name(self) -> str:
         return "write_file"
 
+    def is_read_only(self) -> bool:
+        return False
+
     def description(self) -> str:
         return (
             "将内容写入指定路径的文件（覆盖已有内容）。父目录不存在时自动创建。"

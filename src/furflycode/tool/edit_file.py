@@ -14,6 +14,9 @@ class EditFileTool(BaseTool):
     def name(self) -> str:
         return "edit_file"
 
+    def is_read_only(self) -> bool:
+        return False
+
     def description(self) -> str:
         return (
             "对指定文件中的 old_string 做唯一匹配替换为 new_string。"

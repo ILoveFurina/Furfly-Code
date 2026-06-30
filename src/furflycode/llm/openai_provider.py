@@ -14,6 +14,7 @@ from furflycode.message import (
     Message,
     StreamEvent,
     ToolCall,
+    Usage,
 )
 from furflycode.prompt import SYSTEM_PROMPT
 from furflycode.tool import ToolDefinition
@@ -107,16 +108,20 @@ class OpenAIProvider:
             "model": self._model,
             "messages": api_msgs,
             "stream": True,
+            "stream_options": {"include_usage": True},
         }
         if tools:
             params["tools"] = _to_openai_tools(tools)
 
         # 按 index 累加分片工具调用（多工具下同时分片）。
         tool_calls_buf: dict[int, dict[str, str]] = {}
+        usage_obj = None  # 末 chunk 携带的 usage（端点不支持则为 None）
 
         try:
             response = await self._client.chat.completions.create(**params)
             async for chunk in response:
+                if chunk.usage is not None:
+                    usage_obj = chunk.usage
                 if not chunk.choices:
                     continue
                 choice = chunk.choices[0]
@@ -145,6 +150,17 @@ class OpenAIProvider:
                 ]
                 if calls:
                     yield StreamEvent(tool_calls=calls)
+
+            if usage_obj is not None:
+                details = getattr(usage_obj, "prompt_tokens_details", None)
+                yield StreamEvent(
+                    usage=Usage(
+                        input_tokens=usage_obj.prompt_tokens,
+                        output_tokens=usage_obj.completion_tokens,
+                        cache_read_tokens=getattr(details, "cached_tokens", None),
+                        cache_creation_tokens=None,
+                    )
+                )
 
             yield StreamEvent(done=True)
 

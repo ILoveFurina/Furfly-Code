@@ -17,6 +17,7 @@ from furflycode.message import (
     Message,
     StreamEvent,
     ToolCall,
+    Usage,
     dumps_tool_input,
 )
 from furflycode.prompt import SYSTEM_PROMPT
@@ -168,6 +169,18 @@ class AnthropicProvider:
                             )
                     if calls:
                         yield StreamEvent(tool_calls=calls)
+                # token 用量回传（尽力而为；usage 始终在 final_message 上）
+                u = final_message.usage
+                cache_read = getattr(u, "cache_read_input_tokens", None)
+                cache_create = getattr(u, "cache_creation_input_tokens", None)
+                yield StreamEvent(
+                    usage=Usage(
+                        input_tokens=u.input_tokens,
+                        output_tokens=u.output_tokens,
+                        cache_read_tokens=cache_read,
+                        cache_creation_tokens=cache_create,
+                    )
+                )
 
             yield StreamEvent(done=True)
 
