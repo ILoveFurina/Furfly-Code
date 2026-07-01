@@ -23,8 +23,10 @@ class GlobTool(BaseTool):
 
     def description(self) -> str:
         return (
-            "按 glob 模式列出匹配的文件路径（支持 ** 跨层级）。"
+            "按 glob 模式列出匹配的文件路径（支持 ** 跨层级，如 **/*.py）。"
+            "用于按路径模式找文件；按内容检索用 grep，查看文件内容用 read_file。"
             "可选 path 限定搜索根目录（默认当前目录）。返回排序后的相对路径列表。"
+            "输出上限：最多 100 条匹配，超出尾部标注 [truncated]——需缩小模式范围。"
         )
 
     def parameters(self) -> dict[str, Any]:
@@ -33,7 +35,7 @@ class GlobTool(BaseTool):
             "properties": {
                 "pattern": {
                     "type": "string",
-                    "description": "glob 模式，如 **/*.py",
+                    "description": "glob 模式，如 **/*.py 或 src/**/*.ts",
                 },
                 "path": {
                     "type": "string",

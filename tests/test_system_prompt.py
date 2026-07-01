@@ -93,6 +93,31 @@ def test_bash_has_hard_constraints():
     assert "cat" in hc and "grep" in hc and "sed" in hc
 
 
+def test_bash_hard_constraints_reference_real_tool_name():
+    """Bash 的 hard_constraints 不含不存在的工具名 grep_tool（应指向 grep）。"""
+    defs = {d.name: d for d in _default_defs()}
+    assert "grep_tool" not in defs["bash"].hard_constraints
+
+
+def test_tool_descriptions_disclose_truncation_limits():
+    """四个有截断上限的工具在 description 中告知模型上限。
+
+    准则：描述应说明工具不会返回什么信息（截断上限）。
+    """
+    defs = {d.name: d for d in _default_defs()}
+    # read_file: 2000 行 / 256KB
+    assert "2000" in defs["read_file"].description
+    # bash: 10000 行 / 30000 字符
+    assert "10000" in defs["bash"].description and "30000" in defs["bash"].description
+    # glob: 100 条
+    assert "100" in defs["glob"].description
+    # grep: 100 命中 + 1MB 超长行
+    assert "100" in defs["grep"].description and "1MB" in defs["grep"].description
+    # 截断标注字面应出现在所有四个工具描述里
+    for name in ("read_file", "bash", "glob", "grep"):
+        assert "[truncated]" in defs[name].description
+
+
 def test_read_only_tools_have_empty_or_no_constraints():
     """只读工具（read_file/glob/grep）无强约束——hard_constraints 为空串。"""
     defs = {d.name: d for d in _default_defs()}

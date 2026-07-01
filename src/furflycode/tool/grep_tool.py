@@ -27,8 +27,11 @@ class GrepTool(BaseTool):
     def description(self) -> str:
         return (
             "按 Python 正则表达式在文件内容中检索，返回命中位置（file:line:content）。"
+            "用于按内容找代码；按路径模式找文件用 glob，查看全文用 read_file。"
             "可选 path 限定根目录、glob 限定文件名过滤（默认递归全部文件）。"
-            "无命中返回空说明；正则非法返回结构化错误。"
+            "无命中返回空说明（非错误）；正则非法返回结构化错误。"
+            "输出上限：最多 100 条命中，超出尾部标注 [truncated]；"
+            "超长行（>1MB）与无法解码的文件会跳过不搜。"
         )
 
     def parameters(self) -> dict[str, Any]:
@@ -37,7 +40,7 @@ class GrepTool(BaseTool):
             "properties": {
                 "pattern": {
                     "type": "string",
-                    "description": "Python 正则表达式",
+                    "description": "Python 正则表达式（re 语法）",
                 },
                 "path": {
                     "type": "string",
@@ -45,7 +48,7 @@ class GrepTool(BaseTool):
                 },
                 "glob": {
                     "type": "string",
-                    "description": "文件名过滤模式，如 *.py",
+                    "description": "文件名过滤模式，如 *.py（仅搜匹配该 glob 的文件）",
                 },
             },
             "required": ["pattern"],

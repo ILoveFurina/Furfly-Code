@@ -24,14 +24,19 @@ class BashTool(BaseTool):
     def hard_constraints(self) -> str:
         return (
             "禁止用 cat/grep/sed 等原始终端命令读取或编辑文件，改用专用工具："
-            "读文件用 read_file、搜代码用 grep_tool、改文件用 edit_file。"
+            "读文件用 read_file、搜代码用 grep、改文件用 edit_file。"
             "本工具仅用于执行专用工具无法覆盖的操作（如运行测试、构建、git 命令）。"
         )
 
     def description(self) -> str:
         return (
             "在工作目录下执行 shell 命令，返回标准输出、标准错误与退出码。"
-            "受内置超时约束；超时或非零退出以结构化结果返回，不中断会话。"
+            "用于专用工具无法覆盖的操作：运行测试、构建、安装依赖、git 命令等。"
+            "读取或修改文件内容应改用 read_file/edit_file/write_file，搜代码用 grep——"
+            "见末尾硬性约束。受内置超时约束；超时、非零退出均以结构化结果返回，不中断会话"
+            "（非零退出按结果回灌让模型判断，不标记 is_error）。"
+            "输出上限：stdout 与 stderr 合计最多 10000 行或 30000 字符，"
+            "超出尾部标注 [truncated]。"
         )
 
     def parameters(self) -> dict[str, Any]:
@@ -40,7 +45,7 @@ class BashTool(BaseTool):
             "properties": {
                 "command": {
                     "type": "string",
-                    "description": "要执行的 shell 命令",
+                    "description": "要执行的 shell 命令（在工作目录下运行）",
                 },
             },
             "required": ["command"],

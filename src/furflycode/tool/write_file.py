@@ -26,6 +26,7 @@ class WriteFileTool(BaseTool):
     def description(self) -> str:
         return (
             "将内容写入指定路径的文件（覆盖已有内容）。父目录不存在时自动创建。"
+            "用于创建新文件或明确要整体替换既有文件；局部精确修改应改用 edit_file。"
             "返回写入路径与字节数；写入失败返回结构化错误。"
         )
 
@@ -35,11 +36,11 @@ class WriteFileTool(BaseTool):
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "要写入的文件路径",
+                    "description": "要写入的文件路径（相对路径基于工作目录）",
                 },
                 "content": {
                     "type": "string",
-                    "description": "要写入的文本内容",
+                    "description": "要写入的完整文本内容（覆盖文件原有内容）",
                 },
             },
             "required": ["path", "content"],

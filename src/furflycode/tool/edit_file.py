@@ -26,17 +26,29 @@ class EditFileTool(BaseTool):
     def description(self) -> str:
         return (
             "对指定文件中的 old_string 做唯一匹配替换为 new_string。"
-            "要求 old_string 在文件中恰好出现一次；匹配 0 次或多次时返回错误，"
-            "请提供更长上下文使其唯一。"
+            "用于局部精确修改文件；整体重写应改用 write_file。"
+            "要求 old_string 在文件中恰好出现一次；匹配 0 次返回「未找到」，"
+            "匹配多次返回错误并提示提供更长上下文使其唯一。"
         )
 
     def parameters(self) -> dict[str, Any]:
         return {
             "type": "object",
             "properties": {
-                "path": {"type": "string", "description": "要修改的文件路径"},
-                "old_string": {"type": "string", "description": "要被替换的原文片段"},
-                "new_string": {"type": "string", "description": "替换为的新文片段"},
+                "path": {
+                    "type": "string",
+                    "description": "要修改的文件路径（相对路径基于工作目录）",
+                },
+                "old_string": {
+                    "type": "string",
+                    "description": (
+                        "要被替换的原文片段（须与文件实际内容逐字一致，含缩进与空白）"
+                    ),
+                },
+                "new_string": {
+                    "type": "string",
+                    "description": "替换为的新文片段",
+                },
             },
             "required": ["path", "old_string", "new_string"],
         }

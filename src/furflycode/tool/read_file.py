@@ -24,7 +24,11 @@ class ReadFileTool(BaseTool):
     def description(self) -> str:
         return (
             "读取指定路径文件的文本内容，返回带行号的文本（行号与内容以制表符分隔）。"
-            "用于查看文件内容。文件不存在、是目录或不可读时返回结构化错误。"
+            "用于查看文件内容；按路径模式找文件用 glob，按正则搜内容用 grep，"
+            "修改文件用 edit_file（局部替换）或 write_file（整体重写）。"
+            "文件不存在、是目录或不可读时返回结构化错误。"
+            "输出上限：最多 2000 行或 256KB，超出尾部标注 [truncated]——"
+            "大文件需分段读取。"
         )
 
     def parameters(self) -> dict[str, Any]:
@@ -33,7 +37,7 @@ class ReadFileTool(BaseTool):
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "要读取的文件路径",
+                    "description": "要读取的文件路径（相对路径基于工作目录）",
                 },
             },
             "required": ["path"],
