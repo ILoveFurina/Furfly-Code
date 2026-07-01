@@ -12,24 +12,25 @@ Furfly Code 是一个终端 AI 编程助手（Claude Code 风格），Python 实
 - Lint：`uv run ruff check src/ tests/`
 - 格式化：`uv run ruff format src/ tests/`
 - 类型检查：`uv run mypy src/`
-- 配置：复制 `.furflycode/config.yaml.example` 为 `.furflycode/config.yaml` 并填入密钥
 
 ## 3. Architecture
-分层架构，源码在 `src/furflycode/`，依赖方向严格自顶向下：
+分层架构，源码在 `src/furflycode/`，依赖方向严格自顶向下。各模块一句职责见下，细节读源码：
 
-- `message.py` — 协议无关传输词汇（`Message`/`ToolCall`/`ToolResult`/`StreamEvent`/`ROLE_*`）。中性叶子模块，任何层可依赖而不引入方向倒置。
+- `message.py` — 协议无关传输词汇（`Message`/`ToolCall`/`ToolResult`/`StreamEvent`/`ROLE_*`）。中性叶子模块，零内部依赖，任何层可依赖。
+- `conversation.py` — 进程内多轮对话历史（内存，不落盘）。
 - `config.py` — 加载校验 `.furflycode/config.yaml`，产出 `ProviderConfig`/`Config`。
+- `prompt.py` — 结构化系统提示七模块按固定优先级拼装为静态缓存前缀。
 - `tool/` — `BaseTool` ABC + `Registry` + `ToolDefinition` + `Result`。零内部依赖、不感知 LLM 协议。`new_default_registry()` 注册 6 个内置工具：read/write/edit_file、bash、glob、grep。
+- `context/` — 会话上下文注入叶子层：环境信息（`env_info.py`）+ FURFLY.md 加载器（`furfly_md.py`），协议无关，产出注入用消息内容字符串。
 - `llm/` — `Provider` Protocol（runtime_checkable）+ `new_provider()` 工厂按 `protocol` 字段分发到 `anthropic_provider`/`openai_provider`。适配器在边界把协议无关 `Message` 转成各家 API 形状。
-- `agent/` — `Agent` 单轮闭环编排：请求#1（带工具）→ 收集 `tool_calls` → `Registry` 顺序执行 → 结果回灌 `Conversation` → 请求#2（续答）。对外吐 `Event` async generator。**不 import anthropic/openai**，只依赖 `Provider` 接口。
+- `agent/` — `Agent` ReAct 自主循环编排：带工具请求 → 收集 `tool_calls` → `Registry` 顺序执行 → 结果回灌 `Conversation` → 续答，循环至完成或停止条件。对外吐 `Event` async generator。**不 import anthropic/openai**，只依赖 `Provider` 接口。
 - `tui/` — Textual 应用：`app.py`（`furflycodeApp` + `PromptInput` + `SessionState` 状态机）、`stream.py`（消费 agent 事件流渲染）、`view.py`（渲染函数）、`select.py`（provider 选择）。
-- `cli.py` — 入口：`load` config → `new_default_registry()` → `furflycodeApp(providers, registry).run()`。
+- `cli.py` — 入口：`load` config → `new_default_registry()` → 预读会话上下文 → `furflycodeApp(providers, registry).run()`。
 
 ### 关键设计
 - **Provider 适配器模式**：`agent`/`tui` 只依赖 `llm.Provider` Protocol；新增协议只需实现接口并在 `new_provider` 注册。
 - **工具结果回灌形状**（`anthropic_provider._to_anthropic_messages`）：ROLE_TOOL 回合映射为一条 user 消息的 `tool_result` 块数组；assistant 工具调用回合 content 用 `[text, tool_use...]` 数组。
 - **thinking 与工具历史互斥**：含工具历史的请求关闭 thinking，避免签名缺失导致 400。
-- **单轮上限**：续答请求#2 忽略其返回的工具调用，不再发起新一轮工具执行。
 - **StreamEvent 四态**：text / tool_calls / done / err（err 与 done 互斥）。
 
 ## 4. Conventions
@@ -37,10 +38,11 @@ Furfly Code 是一个终端 AI 编程助手（Claude Code 风格），Python 实
 - 分支策略：直接在 main 上开发。
 - Commit 风格：约定式提交（feat/fix/docs/refactor/chore），中文描述，首行 ≤50 字，必要时空一行写正文说明 why。
 - 工具失败一律包成 `Result(is_error=True)` 回灌，不抛 Python 异常给上层。
+- Spec 驱动工作流见 `.claude/rules/spec-workflow.md`（path-scoped，动 `openspec/` 时加载）。
 
 ## 5. Hard Constraints
 - `agent/` 不得 import `anthropic`/`openai`（协议无关）。
-- `message.py`/`tool/` 保持零内部依赖、不绑定 LLM 协议。
+- `message.py`/`tool/`/`context/` 保持零内部依赖、不绑定 LLM 协议。
 - 工具执行不外抛异常：`BaseTool.execute` 解析/校验失败、`Registry.execute` 超时/异常均转为 `Result(is_error=True)`。
 
 ## 6. Gotchas
@@ -48,6 +50,3 @@ Furfly Code 是一个终端 AI 编程助手（Claude Code 风格），Python 实
 - `mypy` 对同一作用域内带类型标注的重复声明报 `[no-redef]`（即便类型相同）；分支复用变量时只在一处加 `: T` 标注。
 - `query_one("#id")` 不带类型参数返回 `Widget` 基类，访问 `write`/`update` 需显式传类型如 `query_one("#log", RichLog)`。
 - 测试在 Windows 跑完会有 `PytestUnraisableExceptionWarning ... unclosed transport` 噪声（asyncio Proactor 清理），与代码无关，测试全过即可忽略。
-
-## 7. Spec 驱动
-项目用 openspec 做 spec-driven 开发（见 `openspec/`：specs 在 `openspec/specs/`，归档变更在 `openspec/changes/archive/`）。新功能/模块开发可用 `furfly-spec` 或 `openspec-*` skills 走 spec → plan → task → checklist 流程。
