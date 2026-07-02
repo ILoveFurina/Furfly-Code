@@ -92,13 +92,19 @@ paths:
 
 输入可用字段：stdin JSON 含 `session_id`、`transcript_path`、`cwd`、`stop_hook_active`；环境变量 `$CLAUDE_PROJECT_DIR`。
 
-输出契约：永远非阻断。无发现 → 空输出 + exit 0。有发现 → `{"systemMessage": "⚠️ ..."}`。绝不返回 `decision: block`。
+输出契约：永远非阻断。无发现 → 空对象 `{}` + exit 0。有发现 → `{"hookSpecificOutput":{"additionalContext":"⚠️ ..."}}`。绝不返回 `decision: block`。
 
-> **字段选择纠错（两轮）**：
-> - **初版**用 `hookSpecificOutput.additionalContext` 做非阻断反馈，落地后 Stop hook 报 `JSON validation failed`。查证根因（GitHub anthropics/claude-code#37559、thedotmack/claude-mem#1290、trailofbits/skills#131）：prompt-type Stop hook 的输出 schema 严格只接受 `{decision?, reason?, systemMessage?, ...}`，`additionalContext` 在 prompt-type 下不被支持，被严格校验拒绝。改用顶层 `systemMessage`。
-> - **二轮**改 `systemMessage` 后仍报 `JSON validation failed`。再查官方 hooks 文档确认：Stop/SubagentStop 的 `decision` 字段**只接受 `"block"`，`"approve"` 不是合法枚举值**，被校验拒绝。「不阻断」的正确做法是**省略 `decision` 字段**（省略即默认放行），而非输出 `{"decision":"approve"}`。初版纠错只盯 `additionalContext`，漏掉 `decision:"approve"` 这个同源错误。最终修复：无发现输出空对象 `{}`，有发现输出 `{"systemMessage":"..."}`，全程不碰 `decision`。
+> **字段选择纠错（三轮，前两轮结论均错）**：
+> - **初版**用 `hookSpecificOutput.additionalContext`，落地后 Stop hook 报 `JSON validation failed`。当时查社区 issue（anthropics/claude-code#37559、thedotmack/claude-mem#1290、trailofbits/skills#131）推断「prompt-type Stop hook 的输出 schema 严格只接受 `{decision?, reason?, systemMessage?, ...}`，`additionalContext` 在 prompt-type 下不被支持」，改用顶层 `systemMessage`。**此结论错误**——非权威来源，且与官方文档相反。
+> - **二轮**改 `systemMessage` 后仍报 `JSON validation failed`。又推断「`decision` 字段只接受 `"block"`，`"approve"` 非法会被校验拒绝」，于是删掉 `decision`、输出 `{}` 或 `{"systemMessage":...}`。**此结论也错误**——`decision` 合法值实为 `approve|block`，`"approve"` 并非非法。两轮"纠错"都没查权威 docs，靠社区 issue 互相矛盾地猜，根因从未定位。
+> - **三轮**直接查官方 hooks 文档（`code.claude.com/docs/en/hooks`，多页面一致）确认硬事实：
+>   1. **`Stop`/`SubagentStop` 的非阻断反馈字段就是 `hookSpecificOutput.additionalContext`**——官方原文："Stop and SubagentStop hooks can use `hookSpecificOutput.additionalContext` to provide non-error feedback that allows the conversation to continue." 本项目 SessionStart hook 也用此字段且长期通过校验，是活体反证。
+>   2. **`decision` 合法值是 `approve|block`**，且"省略 `decision` 字段或 exit 0 即放行"是官方明文的另一条合法路径——`"approve"` 从非非法。
+>   3. 顶层 `systemMessage` 仅在 hook-development SKILL.md 的 Stop 例子中出现，权威 docs 主体未将其列为 Stop/SubagentStop 的合法字段，不可作为非阻断反馈的依据。
 >
-> 同源教训：prompt 末尾钉死 JSON 形状时，每个字段的**枚举合法值**也要钉死，不能只钉字段名。LLM 会照字面输出 `decision:"approve"` 这种「形状对、值非法」的对象，照样触发 `JSON validation failed`。同时在 prompt 末尾钉死「只输出一个 JSON 对象、不裹 markdown 代码围栏、JSON 外不加文字」，堵 LLM 输出非纯 JSON 的失败模式（trailofbits#131）。
+> 最终修复：无发现输出空对象 `{}`，有发现输出 `{"hookSpecificOutput":{"additionalContext":"..."}}`，全程不输出 `decision`（省略即放行）。
+>
+> 同源教训：**hook 输出 schema 必须查官方 docs（`code.claude.com/docs/en/hooks`），不能靠社区 issue 猜**——社区 issue 常把别版本的 bug 当 schema 真相，且互相矛盾。前两轮正是在社区 issue 之间反复"纠错"，越纠越错。prompt 末尾仍要钉死 JSON 形状、枚举合法值、禁用字段列表（`ok`/`reason`/`result`/`findings`/`decision`/`systemMessage` 一律禁出），堵 LLM「形状对、值非法」或「裹 markdown 围栏」的失败模式。
 
 死循环防护：若 `stop_hook_active` 为 true，直接放行不判定（避免 hook 触发的续跑再次触发 hook 形成循环）。
 
@@ -107,12 +113,12 @@ paths:
 时机：子 agent 结束。
 目标：判断子 agent 工作中是否产生值得沉淀进 CLAUDE.md 的新知识（§6 Gotchas / §5 Hard Constraints / §3 关键设计三类）。
 
-输出契约同 Stop：永远非阻断，有发现走 `systemMessage`（不用 `additionalContext`，根因见 §4.2 纠错说明）。
+输出契约同 Stop：永远非阻断，有发现走 `hookSpecificOutput.additionalContext`（官方明文字段，根因见 §4.2 纠错说明）。
 
 ### 4.4 两 prompt 共性设计
 
 - **变量引用**：prompt 内引用 `$TRANSCRIPT_PATH`、`$CLAUDE_PROJECT_DIR`，Claude Code 把实际值喂给 LLM。
-- **永远非阻断**：满足用户「只提示不阻断」硬要求；有发现走顶层 `systemMessage`（对 Claude 可见、不拦截），是否动 CLAUDE.md 由人决定。不用 `additionalContext`（prompt-type 不接受，见 §4.2 纠错），不输出 `decision`（仅 `block` 合法，省略即放行）。
+- **永远非阻断**：满足用户「只提示不阻断」硬要求；有发现走 `hookSpecificOutput.additionalContext`（官方明文：Stop/SubagentStop 接受此字段做非错误反馈且不拦截，对 Claude 可见），是否动 CLAUDE.md 由人决定。不输出 `decision`（合法值 `approve|block`，不需要阻断就省略，省略即放行）。不输出顶层 `systemMessage`（权威 docs 主体未将其列为 Stop/SubagentStop 合法字段，见 §4.2 纠错）。
 - **严格输出 schema**：prompt 末尾钉死 JSON 形状，避免 LLM 自由发挥导致解析失败（解析失败→非阻断错误→提示丢失）。
 - **timeout 30s**：prompt hook 默认 30s，够 LLM 读 transcript + CLAUDE.md + 出判断；超时算非阻断错误，最坏丢这次提示，不影响主流程。
 - **按章节角色对照而非编号**：prompt 说「架构描述」「硬约束」「gotchas」等角色，不写死「§3」「§5」编号——以后章节调整不脆。
